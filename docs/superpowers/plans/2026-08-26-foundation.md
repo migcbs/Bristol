@@ -4,7 +4,7 @@
 
 **Goal:** Stand up the shared foundation for Bristol — auth, roles, core data model, campus scoping, and a shared design shell — so Spec 1 (Landing), Spec 2 (Admin), and Spec 3 (Academic Portal) can be built on top without retrofitting.
 
-**Architecture:** A single Next.js App Router project with Prisma/PostgreSQL, Auth.js v5 (Credentials provider, JWT sessions), Resend for transactional email, and Tailwind CSS with brand tokens. Route groups `(admin)` and `(portal)` are protected by middleware that reads the session role; a `getCampusScope` helper centralizes plantel-based query filtering for reuse by later specs.
+**Architecture:** A single Next.js App Router project with Prisma/PostgreSQL, Auth.js v5 (Credentials provider, JWT sessions), Resend for transactional email, and Tailwind CSS with brand tokens. Route groups `(admin)` and `(portal)` are protected by a `proxy.ts` route guard (Next.js 16's renamed `middleware.ts`) that reads the session role; a `getCampusScope` helper centralizes plantel-based query filtering for reuse by later specs.
 
 **Tech Stack:** Next.js 15 (App Router, TypeScript), Prisma + PostgreSQL, next-auth v5 (beta), bcryptjs, Resend, Tailwind CSS, Vitest.
 
@@ -17,6 +17,9 @@
 - No public self-registration screens — users are created via seed/admin scripts only. The forgot/reset-password flow IS in scope (core auth).
 - Brand colors are placeholders pending final assets: primary `#2B2B7A` (navy), accent `#E63329` (red) — centralized in one token file so they're a one-line change later.
 - Every task must leave `npm run build`, `npm test`, and `npx tsc --noEmit` passing.
+- **Node ≥20.9 required.** Next.js 16 does not run on this machine's default Node 18. Run `nvm use 22` (or select any Node ≥20.9) before any `npm run build` / `npm test` / `npx tsc --noEmit` in every task — `.nvmrc` (`22`) is already committed.
+- **Tailwind CSS v4 is CSS-first — there is no `tailwind.config.ts`.** Design tokens live in a `@theme` block inside `src/app/globals.css` (see Task 10, updated from the original plan text). Do not create a `tailwind.config.ts`.
+- **AppleDouble junk files.** This repo lives on a network volume that spawns `._<filename>` shadow files on write, which can break lint/build with a parse error. If that happens, run `find . -name "._*" -not -path "./node_modules/*" -not -path "./.git/*" -delete` (`._*` is already gitignored).
 
 ---
 
@@ -58,7 +61,7 @@ src/
     (portal)/
       layout.tsx            # role guard shell for TEACHER/STUDENT/PARENT
       page.tsx              # placeholder dashboard
-  middleware.ts
+  proxy.ts
 tests/
   lib/password.test.ts
   lib/campus-scope.test.ts
@@ -73,7 +76,7 @@ Each `lib/` file has one responsibility (hashing, scoping, tokens, email, auth w
 ### Task 1: Project scaffolding
 
 **Files:**
-- Create: `package.json`, `tsconfig.json`, `next.config.ts`, `tailwind.config.ts`, `postcss.config.mjs`, `.gitignore`, `.env.example`, `vitest.config.ts`
+- Create: `package.json`, `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`, `.gitignore`, `.env.example`, `vitest.config.ts` (Tailwind v4 is CSS-first — no `tailwind.config.ts`)
 - Create: `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/globals.css`
 
 **Interfaces:**
@@ -1178,18 +1181,20 @@ git commit -m "feat: add forgot/reset password and email verification API routes
 
 ---
 
-### Task 9: Role-based middleware
+### Task 9: Role-based route guard (proxy)
 
 **Files:**
-- Create: `src/middleware.ts`
+- Create: `src/proxy.ts`
 
 **Interfaces:**
 - Consumes: `auth` from `src/lib/auth.ts`.
 - Produces: redirects for `/admin/*` and `/portal/*` based on session role.
 
+**Note:** Next.js 16 deprecated the `middleware.ts` file convention and renamed it to `proxy.ts` (function renamed from `middleware` to `proxy`); behavior and the `matcher` config are unchanged. See `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`. Use `proxy.ts`, not `middleware.ts`.
+
 - [ ] **Step 1: Implement**
 
-`src/middleware.ts`:
+`src/proxy.ts`:
 ```ts
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
@@ -1231,8 +1236,8 @@ Expected: no errors.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/middleware.ts
-git commit -m "feat: add role-based route protection middleware"
+git add src/proxy.ts
+git commit -m "feat: add role-based route protection proxy"
 ```
 
 ---
@@ -1241,16 +1246,19 @@ git commit -m "feat: add role-based route protection middleware"
 
 **Files:**
 - Modify: `src/app/globals.css`
-- Modify: `tailwind.config.ts`
 - Create: `src/components/ui/button.tsx`, `src/components/ui/card.tsx`, `src/components/ui/input.tsx`, `src/components/ui/badge.tsx`, `src/components/ui/table.tsx`
 
 **Interfaces:**
 - Produces: React components `Button`, `Card`, `Input`, `Badge`, `Table` (and `TableRow`, `TableCell`, `TableHead`) consumed by Task 11's login page and by Specs 1–3.
 
+**Note:** Tailwind CSS v4 (installed by the Task 1 scaffold) is CSS-first — there is no `tailwind.config.ts`. Design tokens are declared directly in an `@theme` block in `globals.css`; any `--color-*` variable declared there automatically generates matching utility classes (`bg-primary`, `text-primary`, `border-border`, etc.). Do not create a `tailwind.config.ts`.
+
 - [ ] **Step 1: Add brand tokens**
 
-`src/app/globals.css` (add at top, above existing Tailwind directives):
+`src/app/globals.css` — replace the existing `:root` / `@theme inline` block (currently just `--background`/`--foreground`) with:
 ```css
+@import "tailwindcss";
+
 :root {
   --color-primary: #2b2b7a;
   --color-primary-foreground: #ffffff;
@@ -1262,33 +1270,24 @@ git commit -m "feat: add role-based route protection middleware"
   --color-border: #e2e2e6;
 }
 
-@import "tailwindcss";
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-accent: var(--color-accent);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
 ```
 
-- [ ] **Step 2: Expose tokens to Tailwind**
+This keeps the raw hex values in `:root` (the one-line change point for real brand assets later) and re-exposes them through `@theme inline` so Tailwind generates `bg-primary`, `text-primary`, `bg-accent`, `text-accent`, `bg-surface`, `border-border`, etc.
 
-`tailwind.config.ts`:
-```ts
-import type { Config } from "tailwindcss";
-
-export default {
-  content: ["./src/**/*.{ts,tsx}"],
-  theme: {
-    extend: {
-      colors: {
-        primary: "var(--color-primary)",
-        "primary-foreground": "var(--color-primary-foreground)",
-        accent: "var(--color-accent)",
-        "accent-foreground": "var(--color-accent-foreground)",
-        surface: "var(--color-surface)",
-        border: "var(--color-border)",
-      },
-    },
-  },
-} satisfies Config;
-```
-
-- [ ] **Step 3: Button component**
+- [ ] **Step 2: Button component**
 
 `src/components/ui/button.tsx`:
 ```tsx
@@ -1318,7 +1317,7 @@ Button.displayName = "Button";
 
 Run: `npm install clsx`
 
-- [ ] **Step 4: Card, Input, Badge, Table components**
+- [ ] **Step 3: Card, Input, Badge, Table components**
 
 `src/components/ui/card.tsx`:
 ```tsx
@@ -1411,15 +1410,15 @@ export function TableCell(props: TdHTMLAttributes<HTMLTableCellElement>) {
 }
 ```
 
-- [ ] **Step 5: Verify it builds**
+- [ ] **Step 4: Verify it builds**
 
 Run: `npm run build`
 Expected: build succeeds with no errors.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/globals.css tailwind.config.ts src/components/ui package.json package-lock.json
+git add src/app/globals.css src/components/ui package.json package-lock.json
 git commit -m "feat: add brand design tokens and base UI components"
 ```
 
@@ -1642,7 +1641,7 @@ git commit -m "feat: add login, forgot-password, and reset-password pages"
 
 **Interfaces:**
 - Consumes: `auth` from `src/lib/auth.ts` (for reading the session server-side to display the user's name/role).
-- Produces: the landing spots that Spec 2 and Spec 3 will build out; middleware (Task 9) already guards these paths.
+- Produces: the landing spots that Spec 2 and Spec 3 will build out; the proxy (Task 9) already guards these paths.
 
 - [ ] **Step 1: Admin shell**
 
