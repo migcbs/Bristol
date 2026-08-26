@@ -50,6 +50,22 @@ describe("authorizeCredentials", () => {
     expect(user).toBeNull();
   });
 
+  it("matches a mixed-case email against a lowercase-stored user", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      passwordHash: "hash",
+      name: "Ana",
+      role: "STUDENT",
+      emailVerifiedAt: new Date(),
+    });
+    (verifyPassword as any).mockResolvedValue(true);
+
+    const user = await authorizeCredentials({ email: "A@B.com", password: "secret" });
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: "a@b.com" } });
+    expect(user).toEqual({ id: "u1", email: "a@b.com", name: "Ana", role: "STUDENT" });
+  });
+
   it("returns null when the email is not verified", async () => {
     (prisma.user.findUnique as any).mockResolvedValue({
       id: "u1",
