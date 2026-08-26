@@ -15,7 +15,8 @@ export async function authorizeCredentials(credentials: {
   email: string;
   password: string;
 }): Promise<AuthorizedUser | null> {
-  const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+  const email = credentials.email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return null;
   if (!user.emailVerifiedAt) return null;
 
@@ -52,8 +53,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session({ session, token }) {
       if (session.user) {
-        (session.user as { id?: string; role?: Role }).id = token.id as string;
-        (session.user as { id?: string; role?: Role }).role = token.role as Role;
+        session.user.id = token.id as string;
+        session.user.role = token.role as Role;
       }
       return session;
     },
