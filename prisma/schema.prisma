@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum TokenPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+model Campus {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staff    StaffCampus[]
+  teachers TeacherCampus[]
+  students Student[]
+  groups   Group[]
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  role            Role
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  staffCampuses   StaffCampus[]
+  teacherCampuses TeacherCampus[]
+  student         Student?
+  parentLinks     ParentStudent[]
+  tokens          VerificationToken[]
+  teachingGroups  Group[]              @relation("GroupTeacher")
+}
+
+model StaffCampus {
+  id       String @id @default(cuid())
+  userId   String
+  campusId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campus   Campus @relation(fields: [campusId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, campusId])
+}
+
+model TeacherCampus {
+  id       String @id @default(cuid())
+  userId   String
+  campusId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campus   Campus @relation(fields: [campusId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, campusId])
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  campusId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campus    Campus   @relation(fields: [campusId], references: [id])
+
+  parentLinks ParentStudent[]
+  enrollments Enrollment[]
+}
+
+model ParentStudent {
+  id            String  @id @default(cuid())
+  parentUserId  String
+  studentId     String
+  parent        User    @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentUserId, studentId])
+}
+
+model Level {
+  id   String @id @default(cuid())
+  code String @unique
+  name String
+
+  groups Group[]
+}
+
+model Group {
+  id        String   @id @default(cuid())
+  campusId  String
+  levelId   String
+  teacherId String
+  name      String
+  createdAt DateTime @default(now())
+
+  campus      Campus       @relation(fields: [campusId], references: [id])
+  level       Level        @relation(fields: [levelId], references: [id])
+  teacher     User         @relation("GroupTeacher", fields: [teacherId], references: [id])
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  studentId  String
+  groupId    String
+  enrolledAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  group   Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, groupId])
+}
+
+model VerificationToken {
+  id        String       @id @default(cuid())
+  userId    String
+  token     String       @unique
+  purpose   TokenPurpose
+  expiresAt DateTime
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
