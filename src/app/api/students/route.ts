@@ -9,7 +9,7 @@ export async function GET() {
     return Response.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  const scope = await getCampusScope(session.user as { id: string; role: any });
+  const scope = await getCampusScope(session.user);
 
   if (scope.type === "NONE") {
     return Response.json([]);
