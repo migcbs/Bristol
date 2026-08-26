@@ -2,7 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { consumeToken } from "@/lib/tokens";
 
 export async function POST(request: Request) {
-  const { token } = (await request.json()) as { token: string };
+  let body: { token: string };
+  try {
+    body = (await request.json()) as { token: string };
+  } catch {
+    return Response.json({ error: "Cuerpo de la solicitud inválido" }, { status: 400 });
+  }
+  const { token } = body;
 
   const consumed = await consumeToken(token, "EMAIL_VERIFY");
   if (!consumed) {

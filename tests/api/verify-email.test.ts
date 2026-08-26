@@ -40,4 +40,16 @@ describe("verify-email", () => {
     expect(res.status).toBe(400);
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
+
+  it("returns 400 for malformed JSON without throwing", async () => {
+    const req = new Request("http://localhost/api/auth/verify-email", {
+      method: "POST",
+      body: "{not valid json",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const res = await verifyEmail(req);
+    expect(res.status).toBe(400);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
 });
