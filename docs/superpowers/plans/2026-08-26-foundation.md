@@ -4,7 +4,7 @@
 
 **Goal:** Stand up the shared foundation for Bristol — auth, roles, core data model, campus scoping, and a shared design shell — so Spec 1 (Landing), Spec 2 (Admin), and Spec 3 (Academic Portal) can be built on top without retrofitting.
 
-**Architecture:** A single Next.js App Router project with Prisma/PostgreSQL, Auth.js v5 (Credentials provider, JWT sessions), Resend for transactional email, and Tailwind CSS with brand tokens. Route groups `(admin)` and `(portal)` are protected by a `proxy.ts` route guard (Next.js 16's renamed `middleware.ts`) that reads the session role; a `getCampusScope` helper centralizes plantel-based query filtering for reuse by later specs.
+**Architecture:** A single Next.js App Router project with Prisma/PostgreSQL, Auth.js v5 (Credentials provider, JWT sessions), Resend for transactional email, and Tailwind CSS with brand tokens. The `admin/` and `portal/` route segments are protected by a `proxy.ts` route guard (Next.js 16's renamed `middleware.ts`) that reads the session role; a `getCampusScope` helper centralizes plantel-based query filtering for reuse by later specs.
 
 **Tech Stack:** Next.js 15 (App Router, TypeScript), Prisma + PostgreSQL, next-auth v5 (beta), bcryptjs, Resend, Tailwind CSS, Vitest.
 
@@ -55,10 +55,10 @@ src/
       login/page.tsx
       forgot-password/page.tsx
       reset-password/page.tsx
-    (admin)/
+    admin/
       layout.tsx            # role guard shell for ADMIN/STAFF
       page.tsx              # placeholder dashboard
-    (portal)/
+    portal/
       layout.tsx            # role guard shell for TEACHER/STUDENT/PARENT
       page.tsx              # placeholder dashboard
   proxy.ts
@@ -1633,11 +1633,13 @@ git commit -m "feat: add login, forgot-password, and reset-password pages"
 
 ---
 
-### Task 12: Route group shells and placeholder dashboards
+### Task 12: Route shells and placeholder dashboards
+
+**Note:** These are plain `src/app/admin/` and `src/app/portal/` directories, NOT parenthesized route groups like `src/app/(public)/` from Task 11. A Next.js route group (`(name)`) is purely organizational and does not add a URL segment — `src/app/(admin)/page.tsx` would resolve to `/`, not `/admin`, colliding with other root pages and never matching `proxy.ts`'s `/admin/:path*` matcher. `(public)` works in Task 11 because every page inside it has its own real segment (`login`, `forgot-password`, `reset-password`); `admin`/`portal` need to BE the segment, so they must be real folder names.
 
 **Files:**
-- Create: `src/app/(admin)/layout.tsx`, `src/app/(admin)/page.tsx`
-- Create: `src/app/(portal)/layout.tsx`, `src/app/(portal)/page.tsx`
+- Create: `src/app/admin/layout.tsx`, `src/app/admin/page.tsx`
+- Create: `src/app/portal/layout.tsx`, `src/app/portal/page.tsx`
 
 **Interfaces:**
 - Consumes: `auth` from `src/lib/auth.ts` (for reading the session server-side to display the user's name/role).
@@ -1645,7 +1647,7 @@ git commit -m "feat: add login, forgot-password, and reset-password pages"
 
 - [ ] **Step 1: Admin shell**
 
-`src/app/(admin)/layout.tsx`:
+`src/app/admin/layout.tsx`:
 ```tsx
 import { auth } from "@/lib/auth";
 import { signOut } from "@/lib/auth";
@@ -1675,7 +1677,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 }
 ```
 
-`src/app/(admin)/page.tsx`:
+`src/app/admin/page.tsx`:
 ```tsx
 export default function AdminHomePage() {
   return (
@@ -1691,7 +1693,7 @@ export default function AdminHomePage() {
 
 - [ ] **Step 2: Portal shell**
 
-`src/app/(portal)/layout.tsx`:
+`src/app/portal/layout.tsx`:
 ```tsx
 import { auth } from "@/lib/auth";
 import { signOut } from "@/lib/auth";
@@ -1721,7 +1723,7 @@ export default async function PortalLayout({ children }: { children: React.React
 }
 ```
 
-`src/app/(portal)/page.tsx`:
+`src/app/portal/page.tsx`:
 ```tsx
 export default function PortalHomePage() {
   return (
@@ -1743,7 +1745,7 @@ Expected: build succeeds with no errors.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add "src/app/(admin)" "src/app/(portal)"
+git add src/app/admin src/app/portal
 git commit -m "feat: add admin and portal route group shells"
 ```
 
