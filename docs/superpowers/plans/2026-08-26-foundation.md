@@ -1758,7 +1758,7 @@ git commit -m "feat: add admin and portal route group shells"
 
 **Interfaces:**
 - Consumes: `prisma`, `hashPassword`.
-- Produces: reproducible local test data — 2 campuses, 1 admin, 2 staff (one per campus), 2 teachers (one covering both campuses), all 6 CEFR levels, a few groups/students/parents/enrollments — used for manual QA now and by Spec 2/3 development later.
+- Produces: reproducible local test data — 2 campuses, 1 admin, 2 staff (one per campus), 1 teacher covering both campuses, all 6 CEFR levels, a few groups/students/parents/enrollments (6 user accounts total, covering all 5 roles) — used for manual QA now and by Spec 2/3 development later.
 
 - [ ] **Step 1: Implement**
 
@@ -1891,7 +1891,7 @@ main()
 - [ ] **Step 2: Run the seed**
 
 Run: `npm run db:seed`
-Expected: script completes, prints the 5 seeded accounts and shared password.
+Expected: script completes, prints the 6 seeded accounts and shared password.
 
 - [ ] **Step 3: Manually verify login**
 
