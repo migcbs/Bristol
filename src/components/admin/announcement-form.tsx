@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-const ROLE_OPTIONS = ["ADMIN", "STAFF", "TEACHER", "STUDENT", "PARENT"];
+const ROLE_OPTIONS = ["TEACHER", "STUDENT", "PARENT"];
 
 export function AnnouncementForm({
   isAdmin,

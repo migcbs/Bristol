@@ -27,4 +27,27 @@ describe("sendAnnouncementEmail", () => {
       })
     );
   });
+
+  it("escapes HTML special characters in the body", async () => {
+    const { sendAnnouncementEmail } = await import("@/lib/email");
+    await sendAnnouncementEmail("parent@example.com", {
+      title: "Aviso",
+      body: "<script>alert('hi')</script> & \"quoted\"",
+    });
+
+    const call = sendMock.mock.calls[0][0];
+    expect(call.html).not.toContain("<script>");
+    expect(call.html).toContain("&lt;script&gt;alert(&#39;hi&#39;)&lt;/script&gt; &amp; &quot;quoted&quot;");
+  });
+
+  it("converts newlines in the body to <br>", async () => {
+    const { sendAnnouncementEmail } = await import("@/lib/email");
+    await sendAnnouncementEmail("parent@example.com", {
+      title: "Aviso",
+      body: "Línea uno\nLínea dos",
+    });
+
+    const call = sendMock.mock.calls[0][0];
+    expect(call.html).toContain("Línea uno<br>Línea dos");
+  });
 });
