@@ -90,7 +90,7 @@ export async function GET(request: Request) {
   const invoices = await prisma.invoice.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { student: { include: { user: true, campus: true } } },
+    include: { student: { include: { user: { select: { name: true } }, campus: true } } },
   });
 
   return Response.json(invoices);

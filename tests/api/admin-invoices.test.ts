@@ -156,7 +156,7 @@ describe("GET /api/admin/invoices", () => {
     expect(prisma.invoice.findMany).toHaveBeenCalledWith({
       where: {},
       orderBy: { createdAt: "desc" },
-      include: { student: { include: { user: true, campus: true } } },
+      include: { student: { include: { user: { select: { name: true } }, campus: true } } },
     });
   });
 
@@ -169,7 +169,7 @@ describe("GET /api/admin/invoices", () => {
     expect(prisma.invoice.findMany).toHaveBeenCalledWith({
       where: { student: { campusId: { in: ["c1"] } } },
       orderBy: { createdAt: "desc" },
-      include: { student: { include: { user: true, campus: true } } },
+      include: { student: { include: { user: { select: { name: true } }, campus: true } } },
     });
   });
 });

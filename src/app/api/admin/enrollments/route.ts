@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { getCampusScope, enrollmentScopeWhere } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 export async function GET() {
   const session = await auth();
@@ -13,19 +13,14 @@ export async function GET() {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const scope = await getCampusScope(session.user as { id: string; role: any });
-  const where: Prisma.EnrollmentWhereInput =
-    scope.type === "ALL"
-      ? { completedAt: null }
-      : scope.type === "CAMPUS_LIST"
-        ? { completedAt: null, student: { campusId: { in: scope.campusIds } } }
-        : { id: { in: [] } };
+  const scope = await getCampusScope(session.user as { id: string; role: Role });
+  const where = enrollmentScopeWhere(scope);
 
   const enrollments = await prisma.enrollment.findMany({
     where,
     orderBy: { enrolledAt: "asc" },
     include: {
-      student: { include: { user: true, campus: true } },
+      student: { include: { user: { select: { id: true, name: true } }, campus: true } },
       group: { include: { level: true } },
     },
   });

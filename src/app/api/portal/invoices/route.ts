@@ -16,7 +16,7 @@ export async function GET() {
   const invoices = await prisma.invoice.findMany({
     where: { studentId: { in: studentIds } },
     orderBy: { dueDate: "asc" },
-    include: { student: { include: { user: true } } },
+    include: { student: { include: { user: { select: { name: true } } } } },
   });
 
   return Response.json(invoices);

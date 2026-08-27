@@ -30,7 +30,7 @@ describe("GET /api/portal/invoices", () => {
     expect(prisma.invoice.findMany).toHaveBeenCalledWith({
       where: { studentId: { in: ["s1"] } },
       orderBy: { dueDate: "asc" },
-      include: { student: { include: { user: true } } },
+      include: { student: { include: { user: { select: { name: true } } } } },
     });
   });
 

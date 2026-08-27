@@ -25,6 +25,25 @@ export function leadScopeWhere(scope: CampusScope): Prisma.LeadWhereInput {
   }
 }
 
+/**
+ * Builds a Prisma `where` clause for active-Enrollment queries from a
+ * CampusScope. Only enrollments still in progress (`completedAt: null`)
+ * are in play; deny-by-default for any scope variant that isn't
+ * explicitly handled, so unrecognized/future scopes fail closed.
+ */
+export function enrollmentScopeWhere(scope: CampusScope): Prisma.EnrollmentWhereInput {
+  switch (scope.type) {
+    case "ALL":
+      return { completedAt: null };
+    case "CAMPUS_LIST":
+      return { completedAt: null, student: { campusId: { in: scope.campusIds } } };
+    case "SINGLE_CAMPUS":
+    case "NONE":
+    default:
+      return { id: { in: [] } };
+  }
+}
+
 export async function getCampusScope(user: { id: string; role: Role }): Promise<CampusScope> {
   switch (user.role) {
     case "ADMIN":
