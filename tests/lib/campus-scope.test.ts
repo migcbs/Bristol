@@ -9,7 +9,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 import { prisma } from "@/lib/prisma";
-import { getCampusScope, leadScopeWhere } from "@/lib/campus-scope";
+import { getCampusScope, leadScopeWhere, enrollmentScopeWhere } from "@/lib/campus-scope";
 
 describe("getCampusScope", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -65,5 +65,28 @@ describe("leadScopeWhere", () => {
 
   it("denies by default for NONE", () => {
     expect(leadScopeWhere({ type: "NONE" })).toEqual({ id: { in: [] } });
+  });
+});
+
+describe("enrollmentScopeWhere", () => {
+  it("returns only the active-enrollment filter for ALL", () => {
+    expect(enrollmentScopeWhere({ type: "ALL" })).toEqual({ completedAt: null });
+  });
+
+  it("returns an active-enrollment + campus filter for CAMPUS_LIST", () => {
+    expect(enrollmentScopeWhere({ type: "CAMPUS_LIST", campusIds: ["c1", "c2"] })).toEqual({
+      completedAt: null,
+      student: { campusId: { in: ["c1", "c2"] } },
+    });
+  });
+
+  it("denies by default for SINGLE_CAMPUS", () => {
+    expect(enrollmentScopeWhere({ type: "SINGLE_CAMPUS", campusId: "c1" })).toEqual({
+      id: { in: [] },
+    });
+  });
+
+  it("denies by default for NONE", () => {
+    expect(enrollmentScopeWhere({ type: "NONE" })).toEqual({ id: { in: [] } });
   });
 });

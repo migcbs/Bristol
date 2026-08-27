@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn() }));
+vi.mock("@/lib/campus-scope", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/campus-scope")>();
+  return { ...actual, getCampusScope: vi.fn() };
+});
 vi.mock("@/lib/prisma", () => ({
   prisma: { enrollment: { findMany: vi.fn() } },
 }));
@@ -37,7 +40,7 @@ describe("GET /api/admin/enrollments", () => {
       where: { completedAt: null },
       orderBy: { enrolledAt: "asc" },
       include: {
-        student: { include: { user: true, campus: true } },
+        student: { include: { user: { select: { id: true, name: true } }, campus: true } },
         group: { include: { level: true } },
       },
     });
@@ -53,7 +56,7 @@ describe("GET /api/admin/enrollments", () => {
       where: { completedAt: null, student: { campusId: { in: ["c1"] } } },
       orderBy: { enrolledAt: "asc" },
       include: {
-        student: { include: { user: true, campus: true } },
+        student: { include: { user: { select: { id: true, name: true } }, campus: true } },
         group: { include: { level: true } },
       },
     });

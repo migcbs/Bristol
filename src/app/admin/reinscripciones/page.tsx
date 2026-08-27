@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { getCampusScope, enrollmentScopeWhere } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import type { Prisma } from "@prisma/client";
+import type { Role } from "@prisma/client";
 import { Table, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { ReenrollRowActions } from "@/components/admin/reenroll-row-actions";
 
@@ -12,20 +12,14 @@ export default async function ReinscripcionesPage() {
   const role = (session.user as { role: string }).role;
   if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
 
-  const scope = await getCampusScope(session.user as { id: string; role: any });
-
-  const enrollmentWhere: Prisma.EnrollmentWhereInput =
-    scope.type === "ALL"
-      ? { completedAt: null }
-      : scope.type === "CAMPUS_LIST"
-        ? { completedAt: null, student: { campusId: { in: scope.campusIds } } }
-        : { id: { in: [] } };
+  const scope = await getCampusScope(session.user as { id: string; role: Role });
+  const enrollmentWhere = enrollmentScopeWhere(scope);
 
   const enrollments = await prisma.enrollment.findMany({
     where: enrollmentWhere,
     orderBy: { enrolledAt: "asc" },
     include: {
-      student: { include: { user: true, campus: true } },
+      student: { include: { user: { select: { id: true, name: true } }, campus: true } },
       group: { include: { level: true } },
     },
   });
