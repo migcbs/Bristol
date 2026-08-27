@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getVisibleEnrollmentIds } from "@/lib/academic-access";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@prisma/client";
 
 const MAX_TITLE_LENGTH = 200;
 
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     !body.enrollmentId ||
     typeof body.title !== "string" ||
     typeof body.score !== "number" ||
-    !Number.isFinite(body.score)
+    !Number.isInteger(body.score)
   ) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
   }
 
   const maxScore = body.maxScore ?? 100;
-  if (!Number.isFinite(maxScore) || maxScore <= 0) {
+  if (!Number.isInteger(maxScore) || maxScore <= 0) {
     return Response.json({ error: "maxScore debe ser mayor que cero" }, { status: 400 });
   }
   if (body.score < 0 || body.score > maxScore) {
@@ -79,7 +80,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const enrollmentId = searchParams.get("enrollmentId");
 
-  const visibleEnrollmentIds = await getVisibleEnrollmentIds(session.user as { id: string; role: any });
+  const visibleEnrollmentIds = await getVisibleEnrollmentIds(session.user as { id: string; role: Role });
 
   if (enrollmentId) {
     if (!visibleEnrollmentIds.includes(enrollmentId)) {

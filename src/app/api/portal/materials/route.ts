@@ -1,8 +1,11 @@
 import { auth } from "@/lib/auth";
 import { getVisibleGroupIds } from "@/lib/academic-access";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@prisma/client";
 
 const MAX_TITLE_LENGTH = 200;
+const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_URL_LENGTH = 2048;
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -30,10 +33,19 @@ export async function POST(request: Request) {
     return Response.json({ error: "Título inválido" }, { status: 400 });
   }
 
+  if (body.url.length > MAX_URL_LENGTH) {
+    return Response.json({ error: "El enlace es demasiado largo" }, { status: 400 });
+  }
+
   try {
     new URL(body.url);
   } catch {
     return Response.json({ error: "El enlace no es una URL válida" }, { status: 400 });
+  }
+
+  const description = body.description?.trim() || null;
+  if (description && description.length > MAX_DESCRIPTION_LENGTH) {
+    return Response.json({ error: "La descripción es demasiado larga" }, { status: 400 });
   }
 
   const group = await prisma.group.findUnique({ where: { id: body.groupId } });
@@ -49,7 +61,7 @@ export async function POST(request: Request) {
       groupId: body.groupId,
       title,
       url: body.url,
-      description: body.description?.trim() || null,
+      description,
       uploadedById: (session.user as { id: string }).id,
     },
   });
@@ -66,7 +78,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const groupId = searchParams.get("groupId");
 
-  const visibleGroupIds = await getVisibleGroupIds(session.user as { id: string; role: any });
+  const visibleGroupIds = await getVisibleGroupIds(session.user as { id: string; role: Role });
 
   if (groupId) {
     if (!visibleGroupIds.includes(groupId)) {

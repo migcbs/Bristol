@@ -79,6 +79,7 @@ export default async function HorarioPage({
           <h2 className="text-sm font-semibold text-muted">Editar horario</h2>
           <div className="mt-3">
             <ScheduleForm
+              key={selectedGroupId}
               groupId={selectedGroupId}
               initialSlots={slots.map((s) => ({
                 dayOfWeek: s.dayOfWeek,

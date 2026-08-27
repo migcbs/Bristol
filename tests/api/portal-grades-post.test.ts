@@ -84,6 +84,30 @@ describe("POST /api/portal/grades", () => {
     expect(prisma.grade.create).not.toHaveBeenCalled();
   });
 
+  it("returns 400 when score is fractional", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    (prisma.enrollment.findUnique as any).mockResolvedValue({
+      id: "e1",
+      completedAt: null,
+      group: { teacherId: "t1" },
+    });
+    const res = await POST(jsonRequest({ ...VALID_BODY, score: 85.5 }));
+    expect(res.status).toBe(400);
+    expect(prisma.grade.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when maxScore is fractional", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    (prisma.enrollment.findUnique as any).mockResolvedValue({
+      id: "e1",
+      completedAt: null,
+      group: { teacherId: "t1" },
+    });
+    const res = await POST(jsonRequest({ ...VALID_BODY, maxScore: 100.5 }));
+    expect(res.status).toBe(400);
+    expect(prisma.grade.create).not.toHaveBeenCalled();
+  });
+
   it("creates the grade on success, defaulting maxScore to 100 when omitted", async () => {
     (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
     (prisma.enrollment.findUnique as any).mockResolvedValue({
