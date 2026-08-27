@@ -137,6 +137,12 @@ model Group {
   enrollments Enrollment[]
 }
 
+// NOTE: the database also has a partial unique index enforcing "at most one
+// active (completedAt IS NULL) enrollment per student", created via raw SQL
+// in migration 20260827105803_enrollment_one_active_per_student because
+// Prisma's schema DSL has no WHERE-predicate syntax for @@unique/@@index.
+// This index has no representation here, so `prisma migrate dev` will not
+// detect drift from it — do not let a future migration silently drop it.
 model Enrollment {
   id          String    @id @default(cuid())
   studentId   String
