@@ -146,8 +146,6 @@ model Enrollment {
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   group   Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, groupId])
 }
 
 model VerificationToken {

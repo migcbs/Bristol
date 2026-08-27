@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@prisma/client";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "No encontrado" }, { status: 404 });
   }
 
-  const scope = await getCampusScope(session.user as { id: string; role: any });
+  const scope = await getCampusScope(session.user as { id: string; role: Role });
   const inScope =
     scope.type === "ALL" ||
     (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(enrollment.student.campusId));
@@ -54,21 +55,30 @@ export async function POST(request: Request) {
   let newEnrollment;
   try {
     newEnrollment = await prisma.$transaction(async (tx) => {
-      await tx.enrollment.update({
-        where: { id: enrollment.id },
+      const closed = await tx.enrollment.updateMany({
+        where: { id: enrollment.id, completedAt: null },
         data: { completedAt: new Date() },
       });
+      if (closed.count !== 1) {
+        throw Object.assign(new Error("Enrollment already completed"), {
+          code: "ALREADY_COMPLETED",
+        });
+      }
       return tx.enrollment.create({
         data: { studentId: enrollment.studentId, groupId: newGroup.id },
       });
     });
   } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ALREADY_COMPLETED") {
+      return Response.json({ error: "Esta inscripción ya fue completada" }, { status: 400 });
+    }
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return Response.json(
-        { error: "El alumno ya tiene una inscripción en ese grupo" },
+        { error: "El alumno ya tiene una inscripción activa" },
         { status: 400 },
       );
     }
+    console.error("Reinscripción falló:", error);
     return Response.json({ error: "Ocurrió un error al procesar la reinscripción" }, { status: 500 });
   }
 
