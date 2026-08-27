@@ -25,7 +25,7 @@ export function Hero() {
       <div className="relative mx-auto grid min-h-[88vh] max-w-6xl grid-cols-1 items-center gap-12 px-6 py-20 md:grid-cols-[1.1fr_0.9fr] md:py-0">
         <motion.div
           style={{ y: yCopy, opacity: fade }}
-          initial={{ opacity: 0, y: 24 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         >
@@ -54,7 +54,7 @@ export function Hero() {
 
         <motion.div
           style={{ y: yStairs }}
-          initial={{ opacity: 0, x: 24 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
           className="pointer-events-none hidden items-end gap-3 md:flex"
