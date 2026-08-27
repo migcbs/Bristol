@@ -10,6 +10,7 @@ const MODULES = [
   { href: "/admin/reinscripciones", label: "Reinscripciones" },
   { href: "/admin/incidencias", label: "Incidencias" },
   { href: "/admin/comunicaciones", label: "Comunicaciones" },
+  { href: "/admin/mercadotecnia", label: "Mercadotecnia" },
 ];
 
 export function AdminNav() {
