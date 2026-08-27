@@ -196,6 +196,14 @@ enum LeadStatus {
   LOST
 }
 
+enum LeadSource {
+  WEB
+  REDES_SOCIALES
+  REFERIDO
+  VISITA_PRESENCIAL
+  OTRO
+}
+
 model Lead {
   id        String     @id @default(cuid())
   name      String
@@ -204,6 +212,7 @@ model Lead {
   message   String?
   campusId  String?
   status    LeadStatus @default(NEW)
+  source    LeadSource @default(OTRO)
   createdAt DateTime   @default(now())
 
   campus Campus? @relation(fields: [campusId], references: [id])

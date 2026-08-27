@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "LeadSource" AS ENUM ('WEB', 'REDES_SOCIALES', 'REFERIDO', 'VISITA_PRESENCIAL', 'OTRO');
+
+-- AlterTable
+ALTER TABLE "Lead" ADD COLUMN     "source" "LeadSource" NOT NULL DEFAULT 'OTRO';
