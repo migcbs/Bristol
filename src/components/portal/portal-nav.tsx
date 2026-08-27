@@ -4,7 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 
-const MODULES = [{ href: "/portal/cobranzas", label: "Cobranzas" }];
+const MODULES = [
+  { href: "/portal/cobranzas", label: "Cobranzas" },
+  { href: "/portal/asistencia", label: "Asistencia" },
+  { href: "/portal/incidencias", label: "Incidencias" },
+];
 
 export function PortalNav() {
   const pathname = usePathname();
