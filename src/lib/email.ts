@@ -27,3 +27,15 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
     html: `<p>Restablece tu contraseña dando clic <a href="${url}">aquí</a>. Este enlace expira en 1 hora.</p>`,
   });
 }
+
+export async function sendAnnouncementEmail(
+  to: string,
+  announcement: { title: string; body: string }
+): Promise<void> {
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: announcement.title,
+    html: `<p>${announcement.body}</p>`,
+  });
+}
