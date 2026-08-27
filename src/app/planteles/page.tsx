@@ -3,6 +3,8 @@ import { Nav } from "@/components/landing/nav";
 import { Footer } from "@/components/landing/footer";
 import { Card } from "@/components/ui/card";
 
+export const revalidate = 3600;
+
 export default async function PlantelesPage() {
   const campuses = await prisma.campus.findMany({ orderBy: { name: "asc" } });
 

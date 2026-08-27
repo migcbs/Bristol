@@ -8,6 +8,8 @@ import { Testimonials } from "@/components/landing/testimonials";
 import { PricingPreview } from "@/components/landing/pricing-preview";
 import { LeadForm } from "@/components/landing/lead-form";
 
+export const revalidate = 3600;
+
 export default async function HomePage() {
   const [levels, campuses] = await Promise.all([
     prisma.level.findMany({ orderBy: { code: "asc" } }),
