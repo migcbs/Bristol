@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { AttendanceStatus } from "@prisma/client";
 
-const VALID_STATUSES = ["PRESENT", "ABSENT", "LATE", "EXCUSED"];
+const VALID_STATUSES: AttendanceStatus[] = ["PRESENT", "ABSENT", "LATE", "EXCUSED"];
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
-  if (body.records.some((r) => !VALID_STATUSES.includes(r.status))) {
+  if (body.records.some((r) => !VALID_STATUSES.includes(r.status as AttendanceStatus))) {
     return Response.json({ error: "Estatus de asistencia inválido" }, { status: 400 });
   }
 
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       data: body.records.map((r) => ({
         enrollmentId: r.enrollmentId,
         date,
-        status: r.status as any,
+        status: r.status as AttendanceStatus,
       })),
     });
   } catch (error) {

@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { getCampusScope, incidentScopeWhere } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import type { Prisma } from "@prisma/client";
+import type { Role } from "@prisma/client";
 import { Table, TableRow, TableCell, TableHead } from "@/components/ui/table";
 
 export default async function IncidenciasAdminPage() {
@@ -11,13 +11,8 @@ export default async function IncidenciasAdminPage() {
   const role = (session.user as { role: string }).role;
   if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
 
-  const scope = await getCampusScope(session.user as { id: string; role: any });
-  const where: Prisma.IncidentWhereInput =
-    scope.type === "ALL"
-      ? {}
-      : scope.type === "CAMPUS_LIST"
-        ? { student: { campusId: { in: scope.campusIds } } }
-        : { id: { in: [] } };
+  const scope = await getCampusScope(session.user as { id: string; role: Role });
+  const where = incidentScopeWhere(scope);
 
   const incidents = await prisma.incident.findMany({
     where,

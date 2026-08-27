@@ -39,6 +39,20 @@ describe("POST /api/portal/incidents", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 for a whitespace-only description", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    const res = await POST(jsonRequest({ studentId: "s1", description: "   " }));
+    expect(res.status).toBe(400);
+    expect(prisma.incident.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for a description exceeding the max length", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    const res = await POST(jsonRequest({ studentId: "s1", description: "a".repeat(2001) }));
+    expect(res.status).toBe(400);
+    expect(prisma.incident.create).not.toHaveBeenCalled();
+  });
+
   it("returns 403 when groupId is provided but not the teacher's own group", async () => {
     (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
     (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", teacherId: "t2" });
@@ -82,6 +96,21 @@ describe("POST /api/portal/incidents", () => {
     (prisma.incident.create as any).mockResolvedValue({ id: "i1" });
 
     const res = await POST(jsonRequest({ studentId: "s1", groupId: "g1", description: "Llegó tarde" }));
+    expect(res.status).toBe(201);
+    expect(prisma.incident.create).toHaveBeenCalledWith({
+      data: { studentId: "s1", groupId: "g1", reportedById: "t1", description: "Llegó tarde" },
+    });
+  });
+
+  it("trims the description before saving", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", teacherId: "t1" });
+    (prisma.enrollment.findFirst as any).mockResolvedValue({ id: "e1" });
+    (prisma.incident.create as any).mockResolvedValue({ id: "i1" });
+
+    const res = await POST(
+      jsonRequest({ studentId: "s1", groupId: "g1", description: "  Llegó tarde  " })
+    );
     expect(res.status).toBe(201);
     expect(prisma.incident.create).toHaveBeenCalledWith({
       data: { studentId: "s1", groupId: "g1", reportedById: "t1", description: "Llegó tarde" },
