@@ -12,6 +12,9 @@ export default async function AdmisionesPage() {
   if (!session?.user) {
     redirect("/login");
   }
+  const role = (session.user as { role: string }).role;
+  if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
+
   const scope = await getCampusScope(session.user as { id: string; role: any });
 
   const where = leadScopeWhere(scope);

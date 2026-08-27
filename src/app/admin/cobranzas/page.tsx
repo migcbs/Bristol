@@ -6,21 +6,13 @@ import type { Prisma } from "@prisma/client";
 import { Table, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { InvoiceForm } from "@/components/admin/invoice-form";
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pendiente",
-  PAID: "Pagado",
-  OVERDUE: "Vencido",
-  CANCELED: "Cancelado",
-};
-
-function formatMoney(cents: number) {
-  return (cents / 100).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
-}
+import { INVOICE_STATUS_LABELS, formatMoneyMXN } from "@/lib/invoice-status";
 
 export default async function CobranzasPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  const role = (session.user as { role: string }).role;
+  if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
 
   const scope = await getCampusScope(session.user as { id: string; role: any });
 
@@ -72,10 +64,10 @@ export default async function CobranzasPage() {
               <TableRow key={invoice.id}>
                 <TableCell>{invoice.student.user.name}</TableCell>
                 <TableCell>{invoice.description}</TableCell>
-                <TableCell>{formatMoney(invoice.amountCents)}</TableCell>
+                <TableCell>{formatMoneyMXN(invoice.amountCents)}</TableCell>
                 <TableCell>{invoice.dueDate.toLocaleDateString("es-MX")}</TableCell>
                 <TableCell>
-                  <Badge tone="primary">{STATUS_LABELS[invoice.status]}</Badge>
+                  <Badge tone="primary">{INVOICE_STATUS_LABELS[invoice.status]}</Badge>
                 </TableCell>
               </TableRow>
             ))}
