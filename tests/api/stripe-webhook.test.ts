@@ -47,22 +47,19 @@ describe("POST /api/webhooks/stripe", () => {
     });
   });
 
-  it("marks an OVERDUE invoice as PAID when payment completes late", async () => {
+  it("does NOT include PAID or CANCELED in the matchable status set (so a duplicate webhook can't resurrect a canceled invoice or rewrite an already-paid one)", async () => {
     (stripe.webhooks.constructEvent as any).mockReturnValue({
       type: "checkout.session.completed",
       data: { object: { id: "cs_123", payment_status: "paid", metadata: { invoiceId: "i1" } } },
     });
     (prisma.invoice.updateMany as any).mockResolvedValue({ count: 1 });
 
-    const res = await POST(webhookRequest("{}"));
-    expect(res.status).toBe(200);
-    expect(prisma.invoice.updateMany).toHaveBeenCalledWith({
-      where: { id: "i1", status: { in: ["PENDING", "OVERDUE"] } },
-      data: { status: "PAID", paidAt: expect.any(Date) },
-    });
-    // The where-clause matches both PENDING and OVERDUE invoices (not a specific
-    // starting status), so an invoice that was OVERDUE when the customer paid
-    // still transitions to PAID here, instead of silently no-oping.
+    await POST(webhookRequest("{}"));
+
+    const call = (prisma.invoice.updateMany as any).mock.calls[0][0];
+    expect(call.where.status.in).toEqual(["PENDING", "OVERDUE"]);
+    expect(call.where.status.in).not.toContain("PAID");
+    expect(call.where.status.in).not.toContain("CANCELED");
   });
 
   it("does NOT mark the invoice paid when checkout.session.completed fires with payment_status unpaid (e.g. OXXO voucher generation)", async () => {
