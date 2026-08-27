@@ -28,14 +28,24 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
   });
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function sendAnnouncementEmail(
   to: string,
   announcement: { title: string; body: string }
 ): Promise<void> {
+  const safeBody = escapeHtml(announcement.body).replace(/\n/g, "<br>");
   await resend.emails.send({
     from: FROM,
     to,
     subject: announcement.title,
-    html: `<p>${announcement.body}</p>`,
+    html: `<p>${safeBody}</p>`,
   });
 }

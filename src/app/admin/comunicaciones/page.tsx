@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope } from "@/lib/campus-scope";
+import { announcementAdminListWhere } from "@/lib/announcement-scope";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { AnnouncementForm } from "@/components/admin/announcement-form";
-import type { Prisma, Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 export default async function ComunicacionesPage() {
   const session = await auth();
@@ -21,8 +22,7 @@ export default async function ComunicacionesPage() {
         ? await prisma.campus.findMany({ where: { id: { in: scope.campusIds } }, orderBy: { name: "asc" } })
         : [];
 
-  const where: Prisma.AnnouncementWhereInput =
-    role === "ADMIN" ? {} : { OR: [{ createdById: (session.user as { id: string }).id }, { audience: "ALL" }] };
+  const where = announcementAdminListWhere({ id: (session.user as { id: string }).id, role });
 
   const announcements = await prisma.announcement.findMany({
     where,

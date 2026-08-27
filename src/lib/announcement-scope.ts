@@ -58,6 +58,15 @@ export function announcementAudienceWhere(
 }
 
 /**
+ * Builds the Prisma `where` clause for the admin-side announcement list:
+ * an ADMIN sees every announcement, while STAFF sees only the ones they
+ * created plus any ALL-audience announcement.
+ */
+export function announcementAdminListWhere(user: { id: string; role: Role }): Prisma.AnnouncementWhereInput {
+  return user.role === "ADMIN" ? {} : { OR: [{ createdById: user.id }, { audience: "ALL" }] };
+}
+
+/**
  * Inverse direction: given an announcement, resolves the concrete list
  * of users it reaches, for email sending. CAMPUS recipients are the
  * union of TEACHER/STUDENT/PARENT at that campus (not Staff/Admin —

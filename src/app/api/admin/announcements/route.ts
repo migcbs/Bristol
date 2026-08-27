@@ -1,11 +1,13 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope } from "@/lib/campus-scope";
-import { resolveAnnouncementRecipients } from "@/lib/announcement-scope";
+import { resolveAnnouncementRecipients, announcementAdminListWhere } from "@/lib/announcement-scope";
 import { sendAnnouncementEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
-import type { Prisma, Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
-const VALID_ROLES: Role[] = ["ADMIN", "STAFF", "TEACHER", "STUDENT", "PARENT"];
+const VALID_ROLES: Role[] = ["TEACHER", "STUDENT", "PARENT"];
+const MAX_TITLE_LENGTH = 200;
+const MAX_BODY_LENGTH = 5000;
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -34,6 +36,33 @@ export async function POST(request: Request) {
   if (!body.title || !body.body || !body.audience) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
+  if (typeof body.title !== "string" || typeof body.body !== "string") {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+  if (body.campusId !== undefined && typeof body.campusId !== "string") {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+  if (body.role !== undefined && typeof body.role !== "string") {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+
+  const title = body.title.trim();
+  const announcementBody = body.body.trim();
+  if (!title || !announcementBody) {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+  if (title.length > MAX_TITLE_LENGTH) {
+    return Response.json(
+      { error: `El título no puede exceder ${MAX_TITLE_LENGTH} caracteres` },
+      { status: 400 }
+    );
+  }
+  if (announcementBody.length > MAX_BODY_LENGTH) {
+    return Response.json(
+      { error: `El contenido no puede exceder ${MAX_BODY_LENGTH} caracteres` },
+      { status: 400 }
+    );
+  }
 
   if (body.audience === "ALL" && (body.campusId || body.role)) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
@@ -46,6 +75,13 @@ export async function POST(request: Request) {
   }
   if (!["ALL", "CAMPUS", "ROLE"].includes(body.audience)) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+
+  if (body.audience === "CAMPUS") {
+    const campus = await prisma.campus.findUnique({ where: { id: body.campusId! } });
+    if (!campus) {
+      return Response.json({ error: "Plantel no encontrado" }, { status: 404 });
+    }
   }
 
   if (role === "STAFF") {
@@ -62,25 +98,35 @@ export async function POST(request: Request) {
 
   const announcement = await prisma.announcement.create({
     data: {
-      title: body.title,
-      body: body.body,
+      title,
+      body: announcementBody,
       audience: body.audience as "ALL" | "CAMPUS" | "ROLE",
-      campusId: body.campusId ?? null,
-      role: (body.role as Role) ?? null,
+      campusId: body.campusId || null,
+      role: (body.role as Role) || null,
       sendEmail: body.sendEmail ?? false,
       createdById: (session.user as { id: string }).id,
     },
   });
 
   if (body.sendEmail) {
-    const recipients = await resolveAnnouncementRecipients({
-      audience: announcement.audience,
-      campusId: announcement.campusId,
-      role: announcement.role,
-    });
-    await Promise.allSettled(
-      recipients.map((r) => sendAnnouncementEmail(r.email, { title: announcement.title, body: announcement.body }))
-    );
+    try {
+      const recipients = await resolveAnnouncementRecipients({
+        audience: announcement.audience,
+        campusId: announcement.campusId,
+        role: announcement.role,
+      });
+      const results = await Promise.allSettled(
+        recipients.map((r) => sendAnnouncementEmail(r.email, { title: announcement.title, body: announcement.body }))
+      );
+      const failures = results.filter((r) => r.status === "rejected").length;
+      if (failures > 0) {
+        console.error(
+          `sendAnnouncementEmail: ${failures}/${recipients.length} email(s) failed for announcement ${announcement.id}`
+        );
+      }
+    } catch (err) {
+      console.error(`Failed to send announcement emails for announcement ${announcement.id}:`, err);
+    }
   }
 
   return Response.json(announcement, { status: 201 });
@@ -96,10 +142,7 @@ export async function GET() {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const where: Prisma.AnnouncementWhereInput =
-    role === "ADMIN"
-      ? {}
-      : { OR: [{ createdById: (session.user as { id: string }).id }, { audience: "ALL" }] };
+  const where = announcementAdminListWhere({ id: (session.user as { id: string }).id, role });
 
   const announcements = await prisma.announcement.findMany({
     where,

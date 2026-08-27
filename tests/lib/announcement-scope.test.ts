@@ -13,8 +13,29 @@ import { prisma } from "@/lib/prisma";
 import {
   getRecipientCampusIds,
   announcementAudienceWhere,
+  announcementAdminListWhere,
   resolveAnnouncementRecipients,
 } from "@/lib/announcement-scope";
+
+/**
+ * Simulates Prisma's OR/equality semantics for the fields the where-clause
+ * actually uses, so we can assert an announcement is provably excluded
+ * rather than just asserting the where-clause's shape.
+ */
+function matches(
+  announcement: { audience: string; role?: string | null; campusId?: string | null },
+  where: { OR?: Array<Record<string, unknown>> }
+): boolean {
+  return (where.OR ?? []).some((clause) => {
+    if (clause.audience !== announcement.audience) return false;
+    if ("role" in clause && clause.role !== announcement.role) return false;
+    if ("campusId" in clause) {
+      const campusClause = clause.campusId as { in: string[] };
+      if (!announcement.campusId || !campusClause.in.includes(announcement.campusId)) return false;
+    }
+    return true;
+  });
+}
 
 describe("getRecipientCampusIds", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -69,6 +90,32 @@ describe("announcementAudienceWhere", () => {
         { audience: "ROLE", role: "STUDENT" },
         { audience: "CAMPUS", campusId: { in: ["c1", "c2"] } },
       ],
+    });
+  });
+
+  it("excludes announcements outside this user's audience (negative case)", () => {
+    const where = announcementAudienceWhere({ role: "TEACHER" as any }, ["c1"]);
+
+    // A ROLE announcement addressed to a different role must not match.
+    expect(matches({ audience: "ROLE", role: "STUDENT" }, where)).toBe(false);
+    // A CAMPUS announcement for a campus this teacher isn't at must not match.
+    expect(matches({ audience: "CAMPUS", campusId: "c2" }, where)).toBe(false);
+
+    // Sanity check: things that SHOULD match still do, so `matches` isn't vacuously false.
+    expect(matches({ audience: "ALL" }, where)).toBe(true);
+    expect(matches({ audience: "ROLE", role: "TEACHER" }, where)).toBe(true);
+    expect(matches({ audience: "CAMPUS", campusId: "c1" }, where)).toBe(true);
+  });
+});
+
+describe("announcementAdminListWhere", () => {
+  it("returns an empty where (sees everything) for ADMIN", () => {
+    expect(announcementAdminListWhere({ id: "a1", role: "ADMIN" as any })).toEqual({});
+  });
+
+  it("returns own-announcements-plus-ALL for STAFF", () => {
+    expect(announcementAdminListWhere({ id: "s1", role: "STAFF" as any })).toEqual({
+      OR: [{ createdById: "s1" }, { audience: "ALL" }],
     });
   });
 });
