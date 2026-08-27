@@ -66,6 +66,15 @@ describe("POST /api/portal/incidents", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 404 when no groupId is given and a TEACHER's student is outside their campus scope", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "s1", campusId: "c2" });
+
+    const res = await POST(jsonRequest({ studentId: "s1", description: "x" }));
+    expect(res.status).toBe(404);
+  });
+
   it("creates the incident on success with a groupId", async () => {
     (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
     (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", teacherId: "t1" });

@@ -49,14 +49,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "No encontrado" }, { status: 404 });
     }
 
-    if (role !== "TEACHER") {
-      const scope = await getCampusScope(session.user as { id: string; role: any });
-      const inScope =
-        scope.type === "ALL" ||
-        (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(student.campusId));
-      if (!inScope) {
-        return Response.json({ error: "No encontrado" }, { status: 404 });
-      }
+    const scope = await getCampusScope(session.user as { id: string; role: any });
+    const inScope =
+      scope.type === "ALL" ||
+      (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(student.campusId));
+    if (!inScope) {
+      return Response.json({ error: "No encontrado" }, { status: 404 });
     }
   }
 
