@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn() }));
+vi.mock("@/lib/campus-scope", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/campus-scope")>(
+    "@/lib/campus-scope"
+  );
+  return { ...actual, getCampusScope: vi.fn() };
+});
 vi.mock("@/lib/prisma", () => ({
   prisma: { lead: { findMany: vi.fn() } },
 }));
