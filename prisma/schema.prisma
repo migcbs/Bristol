@@ -138,14 +138,22 @@ model VerificationToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ENROLLED
+  LOST
+}
+
 model Lead {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   name      String
   email     String
   phone     String?
   message   String?
   campusId  String?
-  createdAt DateTime @default(now())
+  status    LeadStatus @default(NEW)
+  createdAt DateTime   @default(now())
 
   campus Campus? @relation(fields: [campusId], references: [id])
 }
