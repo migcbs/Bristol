@@ -28,8 +28,12 @@ export function ProgramsPreview({ levels }: { levels: Level[] }) {
 
       <div className="mx-auto mt-14 flex max-w-4xl items-end justify-between gap-2 md:gap-4">
         {levels.map((level, i) => (
-          <div key={level.id} className="group flex flex-1 flex-col items-center gap-3">
-            <p className="max-w-[7rem] text-center text-xs text-muted opacity-0 transition-opacity duration-200 group-hover:opacity-100 md:text-sm">
+          <div
+            key={level.id}
+            tabIndex={0}
+            className="group flex flex-1 flex-col items-center gap-3 outline-none"
+          >
+            <p className="hidden max-w-[7rem] text-center text-xs text-muted transition-opacity duration-200 md:block md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:text-sm">
               {LEVEL_DESCRIPTIONS[level.code] ?? ""}
             </p>
             <div
@@ -39,7 +43,7 @@ export function ProgramsPreview({ levels }: { levels: Level[] }) {
                 background:
                   i === levels.length - 1
                     ? "var(--color-accent)"
-                    : `color-mix(in srgb, var(--color-primary) ${30 + i * 14}%, white)`,
+                    : `color-mix(in srgb, var(--color-primary) ${30 + (i / Math.max(levels.length - 1, 1)) * 56}%, white)`,
               }}
             />
             <span className="font-display text-sm font-bold text-primary">{level.code}</span>

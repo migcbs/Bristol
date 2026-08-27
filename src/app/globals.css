@@ -27,8 +27,16 @@
 
   --font-display: var(--font-display);
   --font-body: var(--font-body);
+}
 
-  --tracking-tightest: -0.04em;
+html {
+  scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {

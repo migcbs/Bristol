@@ -1,7 +1,7 @@
 "use client";
 
 import { HTMLAttributes } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { clsx } from "clsx";
 
 export function Section({
@@ -9,9 +9,11 @@ export function Section({
   children,
   ...props
 }: HTMLAttributes<HTMLElement>) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <motion.section
-      initial={{ opacity: 0, y: 24 }}
+      initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
