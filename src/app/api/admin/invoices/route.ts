@@ -33,11 +33,17 @@ export async function POST(request: Request) {
     !body.studentId ||
     !body.description ||
     typeof body.amountCents !== "number" ||
-    !Number.isInteger(body.amountCents) ||
+    !Number.isSafeInteger(body.amountCents) ||
     body.amountCents <= 0 ||
+    body.amountCents > 2147483647 ||
     !body.dueDate
   ) {
     return Response.json({ error: "Datos de cargo inválidos" }, { status: 400 });
+  }
+
+  const due = new Date(body.dueDate);
+  if (Number.isNaN(due.getTime())) {
+    return Response.json({ error: "Fecha de vencimiento inválida" }, { status: 400 });
   }
 
   const student = await prisma.student.findUnique({ where: { id: body.studentId } });
@@ -56,7 +62,7 @@ export async function POST(request: Request) {
       studentId: body.studentId,
       description: body.description,
       amountCents: body.amountCents,
-      dueDate: new Date(body.dueDate),
+      dueDate: due,
     },
   });
 
