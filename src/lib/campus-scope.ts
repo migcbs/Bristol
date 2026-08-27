@@ -1,11 +1,29 @@
 import { prisma } from "@/lib/prisma";
-import type { Role } from "@prisma/client";
+import type { Prisma, Role } from "@prisma/client";
 
 export type CampusScope =
   | { type: "ALL" }
   | { type: "CAMPUS_LIST"; campusIds: string[] }
   | { type: "SINGLE_CAMPUS"; campusId: string }
   | { type: "NONE" };
+
+/**
+ * Builds a Prisma `where` clause for Lead queries from a CampusScope.
+ * Defaults to denying everything for any scope variant that isn't
+ * explicitly handled, so unrecognized/future scopes fail closed.
+ */
+export function leadScopeWhere(scope: CampusScope): Prisma.LeadWhereInput {
+  switch (scope.type) {
+    case "ALL":
+      return {};
+    case "CAMPUS_LIST":
+      return { OR: [{ campusId: { in: scope.campusIds } }, { campusId: null }] };
+    case "SINGLE_CAMPUS":
+    case "NONE":
+    default:
+      return { id: { in: [] } };
+  }
+}
 
 export async function getCampusScope(user: { id: string; role: Role }): Promise<CampusScope> {
   switch (user.role) {
