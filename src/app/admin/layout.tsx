@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { signOut } from "@/lib/auth";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -20,6 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </header>
+      <AdminNav />
       <main className="p-6">{children}</main>
     </div>
   );
