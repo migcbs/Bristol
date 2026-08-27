@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 
-const MODULES = [{ href: "/admin/admisiones", label: "Admisiones" }];
+const MODULES = [
+  { href: "/admin/admisiones", label: "Admisiones" },
+  { href: "/admin/cobranzas", label: "Cobranzas" },
+];
 
 export function AdminNav() {
   const pathname = usePathname();
