@@ -101,4 +101,43 @@ describe("PATCH /api/admin/leads/[id]", () => {
       data: { campusId: "c1" },
     });
   });
+
+  it("unassigns a lead by setting campusId to null (STAFF)", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u2", role: "STAFF" } });
+    (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
+    (prisma.lead.findUnique as any).mockResolvedValue({ id: "l1", campusId: "c1" });
+    (prisma.lead.update as any).mockResolvedValue({ id: "l1", campusId: null });
+
+    const res = await PATCH(patchRequest({ campusId: null }), ctx);
+    expect(res.status).toBe(200);
+    expect(prisma.lead.update).toHaveBeenCalledWith({
+      where: { id: "l1" },
+      data: { campusId: null },
+    });
+  });
+
+  it("unassigns a lead by setting campusId to null (ADMIN)", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u1", role: "ADMIN" } });
+    (getCampusScope as any).mockResolvedValue({ type: "ALL" });
+    (prisma.lead.findUnique as any).mockResolvedValue({ id: "l1", campusId: "c1" });
+    (prisma.lead.update as any).mockResolvedValue({ id: "l1", campusId: null });
+
+    const res = await PATCH(patchRequest({ campusId: null }), ctx);
+    expect(res.status).toBe(200);
+    expect(prisma.lead.update).toHaveBeenCalledWith({
+      where: { id: "l1" },
+      data: { campusId: null },
+    });
+  });
+
+  it("does not check campus existence when unassigning (campusId: null)", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u2", role: "STAFF" } });
+    (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
+    (prisma.lead.findUnique as any).mockResolvedValue({ id: "l1", campusId: "c1" });
+    (prisma.lead.update as any).mockResolvedValue({ id: "l1", campusId: null });
+
+    const res = await PATCH(patchRequest({ campusId: null }), ctx);
+    expect(res.status).toBe(200);
+    expect(prisma.campus.findUnique).not.toHaveBeenCalled();
+  });
 });

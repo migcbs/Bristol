@@ -19,7 +19,7 @@ export async function PATCH(
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  let body: { status?: string; campusId?: string };
+  let body: { status?: string; campusId?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -30,8 +30,10 @@ export async function PATCH(
     return Response.json({ error: "Estatus inválido" }, { status: 400 });
   }
 
-  if (body.campusId !== undefined) {
-    const campus = await prisma.campus.findUnique({ where: { id: body.campusId } });
+  const targetCampusId = body.campusId;
+
+  if (targetCampusId !== undefined && targetCampusId !== null) {
+    const campus = await prisma.campus.findUnique({ where: { id: targetCampusId } });
     if (!campus) {
       return Response.json({ error: "Plantel inválido" }, { status: 400 });
     }
@@ -46,9 +48,10 @@ export async function PATCH(
   const scope = await getCampusScope(session.user as { id: string; role: any });
 
   if (
-    body.campusId !== undefined &&
+    targetCampusId !== undefined &&
+    targetCampusId !== null &&
     scope.type === "CAMPUS_LIST" &&
-    !scope.campusIds.includes(body.campusId)
+    !scope.campusIds.includes(targetCampusId)
   ) {
     return Response.json({ error: "Plantel fuera de tu alcance" }, { status: 400 });
   }
@@ -62,7 +65,7 @@ export async function PATCH(
     return Response.json({ error: "No encontrado" }, { status: 404 });
   }
 
-  const data: { status?: LeadStatus; campusId?: string } = {};
+  const data: { status?: LeadStatus; campusId?: string | null } = {};
   if (body.status !== undefined) data.status = body.status as LeadStatus;
   if (body.campusId !== undefined) data.campusId = body.campusId;
 
