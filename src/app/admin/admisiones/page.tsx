@@ -1,28 +1,20 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { getCampusScope, leadScopeWhere } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
 import { Table, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { LeadRowActions } from "@/components/admin/lead-row-actions";
-
-const STATUS_LABELS: Record<string, string> = {
-  NEW: "Nuevo",
-  CONTACTED: "Contactado",
-  ENROLLED: "Inscrito",
-  LOST: "Perdido",
-};
+import { LEAD_STATUS_LABELS, LEAD_STATUS_TONE } from "@/lib/lead-status";
 
 export default async function AdmisionesPage() {
   const session = await auth();
-  const scope = await getCampusScope(session!.user as { id: string; role: any });
+  if (!session?.user) {
+    redirect("/login");
+  }
+  const scope = await getCampusScope(session.user as { id: string; role: any });
 
-  const where: Prisma.LeadWhereInput =
-    scope.type === "ALL"
-      ? {}
-      : scope.type === "CAMPUS_LIST"
-        ? { OR: [{ campusId: { in: scope.campusIds } }, { campusId: null }] }
-        : {};
+  const where = leadScopeWhere(scope);
 
   const [leads, campuses] = await Promise.all([
     prisma.lead.findMany({ where, orderBy: { createdAt: "desc" }, include: { campus: true } }),
@@ -57,7 +49,9 @@ export default async function AdmisionesPage() {
                 </TableCell>
                 <TableCell>{lead.campus?.name ?? "Sin asignar"}</TableCell>
                 <TableCell>
-                  <Badge tone="primary">{STATUS_LABELS[lead.status]}</Badge>
+                  <Badge tone={LEAD_STATUS_TONE[lead.status]}>
+                    {LEAD_STATUS_LABELS[lead.status]}
+                  </Badge>
                 </TableCell>
                 <TableCell>{lead.createdAt.toLocaleDateString("es-MX")}</TableCell>
                 <TableCell>

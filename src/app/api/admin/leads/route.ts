@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { getCampusScope, leadScopeWhere } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
-import type { Prisma, LeadStatus } from "@prisma/client";
+import type { LeadStatus } from "@prisma/client";
 
 const VALID_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "ENROLLED", "LOST"];
 
@@ -18,12 +18,7 @@ export async function GET(request: Request) {
 
   const scope = await getCampusScope(session.user as { id: string; role: any });
 
-  const where: Prisma.LeadWhereInput =
-    scope.type === "ALL"
-      ? {}
-      : scope.type === "CAMPUS_LIST"
-        ? { OR: [{ campusId: { in: scope.campusIds } }, { campusId: null }] }
-        : {};
+  const where = leadScopeWhere(scope);
 
   const statusParam = new URL(request.url).searchParams.get("status");
   if (statusParam && VALID_STATUSES.includes(statusParam as LeadStatus)) {
