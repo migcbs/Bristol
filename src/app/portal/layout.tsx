@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { signOut } from "@/lib/auth";
+import { PortalNav } from "@/components/portal/portal-nav";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -20,6 +21,7 @@ export default async function PortalLayout({ children }: { children: React.React
           </form>
         </div>
       </header>
+      <PortalNav />
       <main className="p-6">{children}</main>
     </div>
   );
