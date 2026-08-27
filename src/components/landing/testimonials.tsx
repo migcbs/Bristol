@@ -42,7 +42,10 @@ export function Testimonials() {
             fill="currentColor"
           />
         </svg>
-        <p className="mt-6 font-display text-2xl font-medium leading-snug md:text-3xl">
+        <h2 className="mt-6 text-sm font-semibold uppercase tracking-wide text-white/60">
+          Lo que dicen nuestros alumnos
+        </h2>
+        <p className="mt-4 font-display text-2xl font-medium leading-snug md:text-3xl">
           {featured.quote}
         </p>
         <p className="mt-6 text-sm font-semibold text-white">{featured.name}</p>

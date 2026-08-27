@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -9,10 +9,11 @@ const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 export function Hero() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const shouldReduceMotion = useReducedMotion();
 
-  const yStairs = useTransform(scrollYProgress, [0, 1], ["0%", "22%"]);
-  const yCopy = useTransform(scrollYProgress, [0, 1], ["0%", "12%"]);
-  const fade = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const yStairs = useTransform(scrollYProgress, [0, 1], shouldReduceMotion ? ["0%", "0%"] : ["0%", "22%"]);
+  const yCopy = useTransform(scrollYProgress, [0, 1], shouldReduceMotion ? ["0%", "0%"] : ["0%", "12%"]);
+  const fade = useTransform(scrollYProgress, [0, 0.8], shouldReduceMotion ? [1, 1] : [1, 0]);
 
   return (
     <div

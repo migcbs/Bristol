@@ -53,32 +53,63 @@ export function LeadForm() {
         </div>
 
         <Card className="m-2 md:m-3">
-          {status === "sent" ? (
-            <p className="text-sm font-medium text-primary">
-              ¡Gracias! Recibimos tu solicitud, pronto te contactaremos.
-            </p>
-          ) : (
+          <div aria-live="polite">
+            {status === "sent" && (
+              <p className="text-sm font-medium text-primary">
+                ¡Gracias! Recibimos tu solicitud, pronto te contactaremos.
+              </p>
+            )}
+          </div>
+          {status !== "sent" && (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                placeholder="Nombre completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-              <Input
-                type="email"
-                placeholder="Correo electrónico"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <Input
-                type="tel"
-                placeholder="Teléfono (opcional)"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-              {error && <p className="text-sm text-accent">{error}</p>}
+              <div>
+                <label htmlFor="lead-name" className="text-sm font-medium text-muted">
+                  Nombre completo
+                </label>
+                <Input
+                  id="lead-name"
+                  placeholder="Nombre completo"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label htmlFor="lead-email" className="text-sm font-medium text-muted">
+                  Correo electrónico
+                </label>
+                <Input
+                  id="lead-email"
+                  type="email"
+                  placeholder="Correo electrónico"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label htmlFor="lead-phone" className="text-sm font-medium text-muted">
+                  Teléfono (opcional)
+                </label>
+                <Input
+                  id="lead-phone"
+                  type="tel"
+                  placeholder="Teléfono (opcional)"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              {error && (
+                <p role="alert" className="text-sm text-accent-dark">
+                  {error}
+                </p>
+              )}
               <Button type="submit" variant="accent" className="w-full" disabled={status === "sending"}>
                 {status === "sending" ? "Enviando..." : "Solicitar informes"}
               </Button>
