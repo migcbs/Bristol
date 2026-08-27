@@ -1,7 +1,10 @@
 "use client";
 
+import { useRef } from "react";
 import type { Level } from "@prisma/client";
-import { Section } from "@/components/ui/section";
+import { motion, useScroll, useTransform, useReducedMotion, type MotionValue } from "framer-motion";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const LEVEL_DESCRIPTIONS: Record<string, string> = {
@@ -13,10 +16,79 @@ const LEVEL_DESCRIPTIONS: Record<string, string> = {
   C2: "Precisión casi nativa en cualquier contexto.",
 };
 
-export function ProgramsPreview({ levels }: { levels: Level[] }) {
+function LevelCard({ level }: { level: Level }) {
   return (
-    <Section id="programas">
-      <div className="mx-auto max-w-3xl text-center">
+    <Card className="flex h-full w-full flex-col justify-between">
+      <div>
+        <Badge tone="primary">{level.code}</Badge>
+        <h3 className="mt-4 font-display text-3xl font-bold text-primary">{level.name}</h3>
+      </div>
+      <p className="text-base text-muted">{LEVEL_DESCRIPTIONS[level.code] ?? ""}</p>
+    </Card>
+  );
+}
+
+function StackCard({
+  level,
+  index,
+  total,
+  scrollYProgress,
+}: {
+  level: Level;
+  index: number;
+  total: number;
+  scrollYProgress: MotionValue<number>;
+}) {
+  const isLast = index === total - 1;
+  const segment = 1 / total;
+  const start = index * segment;
+  const end = start + segment;
+
+  const rotate = useTransform(scrollYProgress, [start, end], isLast ? [0, 0] : [0, -10]);
+  const y = useTransform(scrollYProgress, [start, end], isLast ? [0, 0] : [0, -60]);
+  const x = useTransform(scrollYProgress, [start, end], isLast ? [0, 0] : [0, 40]);
+  const opacity = useTransform(
+    scrollYProgress,
+    isLast ? [start, end] : [start, end - segment * 0.15, end],
+    isLast ? [1, 1] : [1, 1, 0]
+  );
+  const entranceScale = useTransform(
+    scrollYProgress,
+    [Math.max(0, start - segment), start],
+    [0.94, 1]
+  );
+
+  return (
+    <motion.div
+      style={{ rotate, y, x, opacity, scale: entranceScale, zIndex: total - index }}
+      className="absolute inset-0"
+    >
+      <LevelCard level={level} />
+    </motion.div>
+  );
+}
+
+function StaticStack({ levels }: { levels: Level[] }) {
+  return (
+    <div className="mx-auto grid max-w-4xl gap-6 px-6 sm:grid-cols-2 lg:grid-cols-3">
+      {levels.map((level) => (
+        <LevelCard key={level.id} level={level} />
+      ))}
+    </div>
+  );
+}
+
+export function ProgramsPreview({ levels }: { levels: Level[] }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: trackRef,
+    offset: ["start start", "end end"],
+  });
+
+  return (
+    <section id="programas" className="relative bg-surface">
+      <div className="mx-auto max-w-3xl px-6 pb-8 pt-16 text-center">
         <h2 className="text-3xl font-bold text-primary md:text-4xl">
           Un camino claro, nivel por nivel
         </h2>
@@ -26,37 +98,31 @@ export function ProgramsPreview({ levels }: { levels: Level[] }) {
         </p>
       </div>
 
-      <div className="mx-auto mt-14 flex max-w-4xl items-end justify-between gap-2 md:gap-4">
-        {levels.map((level, i) => (
-          <div
-            key={level.id}
-            tabIndex={0}
-            aria-label={`Nivel ${level.code}: ${level.name}`}
-            className="group flex flex-1 flex-col items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            <p className="hidden max-w-[7rem] text-center text-xs text-muted transition-opacity duration-200 md:block md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:text-sm">
-              {LEVEL_DESCRIPTIONS[level.code] ?? ""}
-            </p>
-            <div
-              className="w-full rounded-t-md transition-all duration-300 group-hover:brightness-110"
-              style={{
-                height: `${56 + i * 26}px`,
-                background:
-                  i === levels.length - 1
-                    ? "var(--color-accent)"
-                    : `color-mix(in srgb, var(--color-primary) ${30 + (i / Math.max(levels.length - 1, 1)) * 56}%, white)`,
-              }}
-            />
-            <span className="font-display text-sm font-bold text-primary">{level.code}</span>
+      {shouldReduceMotion ? (
+        <StaticStack levels={levels} />
+      ) : (
+        <div ref={trackRef} style={{ height: `${levels.length * 70}vh` }} className="relative">
+          <div className="sticky top-24 flex h-[70vh] items-center justify-center px-6">
+            <div className="relative aspect-[3/4] w-full max-w-sm">
+              {levels.map((level, i) => (
+                <StackCard
+                  key={level.id}
+                  level={level}
+                  index={i}
+                  total={levels.length}
+                  scrollYProgress={scrollYProgress}
+                />
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      <div className="mt-12 text-center">
+      <div className="px-6 pb-16 text-center">
         <a href="/programas">
           <Button variant="outline">Ver todos los niveles</Button>
         </a>
       </div>
-    </Section>
+    </section>
   );
 }
