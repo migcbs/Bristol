@@ -30,8 +30,12 @@ export function Nav() {
       if (e.key === "Escape") setOpen(false);
     }
 
+    document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   return (
@@ -63,33 +67,69 @@ export function Nav() {
           aria-expanded={open}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-controls="mobile-menu"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-primary md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className="relative flex h-10 w-10 items-center justify-center rounded-full text-primary md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            {open ? <path d="M6 6 18 18M6 18 18 6" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-          </svg>
+          <span
+            className={`absolute h-0.5 w-6 rounded-full bg-current transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${
+              open ? "translate-y-0 rotate-45" : "-translate-y-1.5"
+            }`}
+          />
+          <span
+            className={`absolute h-0.5 w-6 rounded-full bg-current transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${
+              open ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"
+            }`}
+          />
+          <span
+            className={`absolute h-0.5 w-6 rounded-full bg-current transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${
+              open ? "translate-y-0 -rotate-45" : "translate-y-1.5"
+            }`}
+          />
         </button>
       </div>
 
-      {open && (
-        <nav id="mobile-menu" className="flex flex-col gap-1 border-t border-border bg-white px-6 py-4 md:hidden">
-          {links.map((link) => (
+      <div
+        className={`fixed inset-0 z-40 md:hidden ${open ? "" : "pointer-events-none"}`}
+      >
+        <div
+          onClick={() => setOpen(false)}
+          aria-hidden
+          className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${
+            open ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <nav
+          id="mobile-menu"
+          className={`absolute right-0 top-0 flex h-full w-[85%] max-w-sm flex-col justify-center gap-1 bg-white px-8 shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${
+            open ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          {links.map((link, i) => (
             <a
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="rounded-lg px-2 py-3 text-base font-medium text-muted transition-colors hover:bg-surface hover:text-primary"
+              style={{ transitionDelay: open ? `${100 + i * 60}ms` : "0ms" }}
+              className={`py-2 font-display text-4xl font-bold text-primary transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] hover:text-accent ${
+                open ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+              }`}
             >
               {link.label}
             </a>
           ))}
-          <Link href="/login" onClick={() => setOpen(false)} className="mt-2">
-            <Button variant="outline" className="w-full">
-              Iniciar sesión
-            </Button>
-          </Link>
+          <div
+            style={{ transitionDelay: open ? "450ms" : "0ms" }}
+            className={`mt-8 border-t border-border pt-8 transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${
+              open ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+            }`}
+          >
+            <Link href="/login" onClick={() => setOpen(false)}>
+              <Button variant="outline" className="w-full">
+                Iniciar sesión
+              </Button>
+            </Link>
+          </div>
         </nav>
-      )}
+      </div>
     </header>
   );
 }

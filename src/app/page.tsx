@@ -7,6 +7,7 @@ import { CampusesPreview } from "@/components/landing/campuses-preview";
 import { Testimonials } from "@/components/landing/testimonials";
 import { PricingPreview } from "@/components/landing/pricing-preview";
 import { LeadForm } from "@/components/landing/lead-form";
+import { SplashGate } from "@/components/landing/splash-gate";
 
 export const revalidate = 3600;
 
@@ -17,15 +18,17 @@ export default async function HomePage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-white">
-      <Nav />
-      <Hero />
-      <ProgramsPreview levels={levels} />
-      <CampusesPreview campuses={campuses} />
-      <Testimonials />
-      <PricingPreview />
-      <LeadForm />
-      <Footer />
-    </div>
+    <SplashGate>
+      <div className="min-h-screen bg-white">
+        <Nav />
+        <Hero />
+        <ProgramsPreview levels={levels} />
+        <CampusesPreview campuses={campuses} />
+        <Testimonials />
+        <PricingPreview />
+        <LeadForm />
+        <Footer />
+      </div>
+    </SplashGate>
   );
 }
