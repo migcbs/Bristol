@@ -51,15 +51,26 @@ export async function POST(request: Request) {
     return Response.json({ error: "El grupo destino debe ser del mismo plantel" }, { status: 400 });
   }
 
-  const newEnrollment = await prisma.$transaction(async (tx) => {
-    await tx.enrollment.update({
-      where: { id: enrollment.id },
-      data: { completedAt: new Date() },
+  let newEnrollment;
+  try {
+    newEnrollment = await prisma.$transaction(async (tx) => {
+      await tx.enrollment.update({
+        where: { id: enrollment.id },
+        data: { completedAt: new Date() },
+      });
+      return tx.enrollment.create({
+        data: { studentId: enrollment.studentId, groupId: newGroup.id },
+      });
     });
-    return tx.enrollment.create({
-      data: { studentId: enrollment.studentId, groupId: newGroup.id },
-    });
-  });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      return Response.json(
+        { error: "El alumno ya tiene una inscripción en ese grupo" },
+        { status: 400 },
+      );
+    }
+    return Response.json({ error: "Ocurrió un error al procesar la reinscripción" }, { status: 500 });
+  }
 
   return Response.json(newEnrollment);
 }

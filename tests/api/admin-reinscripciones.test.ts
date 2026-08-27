@@ -112,4 +112,24 @@ describe("POST /api/admin/reinscripciones", () => {
     expect(res.status).toBe(200);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
+
+  it("returns 400 when the student already has an enrollment in the destination group", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u1", role: "ADMIN" } });
+    (getCampusScope as any).mockResolvedValue({ type: "ALL" });
+    (prisma.enrollment.findUnique as any).mockResolvedValue({
+      id: "e1",
+      completedAt: null,
+      studentId: "s1",
+      student: { campusId: "c1" },
+    });
+    (prisma.group.findUnique as any).mockResolvedValue({ id: "g2", campusId: "c1" });
+    (prisma.$transaction as any).mockRejectedValue(
+      Object.assign(new Error("Unique constraint failed"), { code: "P2002" }),
+    );
+
+    const res = await POST(jsonRequest({ enrollmentId: "e1", newGroupId: "g2" }));
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/inscripción/i);
+  });
 });
