@@ -66,6 +66,34 @@ describe("POST /api/admin/invoices", () => {
     expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
 
+  it("returns 400 for an invalid dueDate string", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u1", role: "ADMIN" } });
+    const res = await POST(
+      jsonRequest("POST", {
+        studentId: "s1",
+        description: "Colegiatura",
+        amountCents: 100000,
+        dueDate: "not-a-date",
+      })
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for an amountCents above the 32-bit Int max", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u1", role: "ADMIN" } });
+    const res = await POST(
+      jsonRequest("POST", {
+        studentId: "s1",
+        description: "Colegiatura",
+        amountCents: 2147483648,
+        dueDate: "2026-09-01",
+      })
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
   it("returns 404 when the student is outside the caller's scope", async () => {
     (auth as any).mockResolvedValue({ user: { id: "u2", role: "STAFF" } });
     (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
