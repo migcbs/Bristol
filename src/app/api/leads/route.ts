@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { isValidEmail } from "@/lib/validation";
+import type { LeadSource } from "@prisma/client";
 
-const VALID_SOURCES = ["WEB", "REDES_SOCIALES", "REFERIDO", "VISITA_PRESENCIAL", "OTRO"];
+const VALID_SOURCES: LeadSource[] = ["WEB", "REDES_SOCIALES", "REFERIDO", "VISITA_PRESENCIAL", "OTRO"];
 
 export async function POST(request: Request) {
   let body: {
@@ -44,13 +45,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "Plantel inválido" }, { status: 400 });
   }
 
-  if (body.source !== undefined && !VALID_SOURCES.includes(body.source)) {
+  if (body.source !== undefined && !VALID_SOURCES.includes(body.source as LeadSource)) {
     return Response.json({ error: "Origen de lead inválido" }, { status: 400 });
   }
 
   try {
     const lead = await prisma.lead.create({
-      data: { name: trimmedName, email: trimmedEmail, phone, message, campusId, source: body.source as any },
+      data: { name: trimmedName, email: trimmedEmail, phone, message, campusId, source: body.source as LeadSource },
     });
 
     return Response.json(lead, { status: 201 });

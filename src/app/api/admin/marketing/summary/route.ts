@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope, leadScopeWhere } from "@/lib/campus-scope";
-import { prisma } from "@/lib/prisma";
+import { getLeadMarketingSummary } from "@/lib/lead-marketing";
 import type { Role } from "@prisma/client";
 
 export async function GET() {
@@ -16,13 +16,7 @@ export async function GET() {
   const scope = await getCampusScope(session.user as { id: string; role: Role });
   const where = leadScopeWhere(scope);
 
-  const [statusGroups, sourceGroups] = await Promise.all([
-    prisma.lead.groupBy({ by: ["status"], where, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ["source"], where, _count: { _all: true } }),
-  ]);
+  const summary = await getLeadMarketingSummary(where);
 
-  return Response.json({
-    byStatus: statusGroups.map((g) => ({ status: g.status, count: g._count._all })),
-    bySource: sourceGroups.map((g) => ({ source: g.source, count: g._count._all })),
-  });
+  return Response.json(summary);
 }
