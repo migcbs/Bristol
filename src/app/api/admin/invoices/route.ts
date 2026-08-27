@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     !body.studentId ||
     !body.description ||
     typeof body.amountCents !== "number" ||
+    !Number.isInteger(body.amountCents) ||
     body.amountCents <= 0 ||
     !body.dueDate
   ) {
