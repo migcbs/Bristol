@@ -5,17 +5,7 @@ import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PayButton } from "@/components/portal/pay-button";
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pendiente",
-  PAID: "Pagado",
-  OVERDUE: "Vencido",
-  CANCELED: "Cancelado",
-};
-
-function formatMoney(cents: number) {
-  return (cents / 100).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
-}
+import { INVOICE_STATUS_LABELS, formatMoneyMXN } from "@/lib/invoice-status";
 
 export default async function PortalCobranzasPage({
   searchParams,
@@ -52,11 +42,13 @@ export default async function PortalCobranzasPage({
               <p className="text-sm text-muted">
                 {invoice.student.user.name} · Vence {invoice.dueDate.toLocaleDateString("es-MX")}
               </p>
-              <p className="mt-1 text-lg font-bold text-primary">{formatMoney(invoice.amountCents)}</p>
+              <p className="mt-1 text-lg font-bold text-primary">{formatMoneyMXN(invoice.amountCents)}</p>
             </div>
             <div className="flex items-center gap-3">
-              <Badge tone="primary">{STATUS_LABELS[invoice.status]}</Badge>
-              {invoice.status === "PENDING" && <PayButton invoiceId={invoice.id} />}
+              <Badge tone="primary">{INVOICE_STATUS_LABELS[invoice.status]}</Badge>
+              {(invoice.status === "PENDING" || invoice.status === "OVERDUE") && (
+                <PayButton invoiceId={invoice.id} />
+              )}
             </div>
           </Card>
         ))}
