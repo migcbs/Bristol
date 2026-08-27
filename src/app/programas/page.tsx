@@ -11,6 +11,8 @@ const LEVEL_DESCRIPTIONS: Record<string, string> = {
   C2: "Precisión casi nativa en cualquier contexto.",
 };
 
+export const revalidate = 3600;
+
 export default async function ProgramasPage() {
   const levels = await prisma.level.findMany({ orderBy: { code: "asc" } });
 
