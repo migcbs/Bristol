@@ -13,7 +13,7 @@ async function handleCheckoutSession(session: Stripe.Checkout.Session) {
   }
 
   await prisma.invoice.updateMany({
-    where: { id: invoiceId, status: "PENDING" },
+    where: { id: invoiceId, status: { in: ["PENDING", "OVERDUE"] } },
     data: { status: "PAID", paidAt: new Date() },
   });
 }
