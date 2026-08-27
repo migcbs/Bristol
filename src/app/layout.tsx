@@ -19,7 +19,11 @@ export const metadata: Metadata = {
     "Aprende inglés con confianza en Bristol: programas presenciales por nivel, profesores dedicados y planteles cerca de ti.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="es"
