@@ -8,6 +8,7 @@ const MODULES = [
   { href: "/portal/cobranzas", label: "Cobranzas" },
   { href: "/portal/asistencia", label: "Asistencia" },
   { href: "/portal/incidencias", label: "Incidencias" },
+  { href: "/portal/comunicaciones", label: "Comunicaciones" },
 ];
 
 export function PortalNav() {
