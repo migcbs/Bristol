@@ -18,20 +18,25 @@ export function LeadForm() {
     setStatus("sending");
     setError(null);
 
-    const res = await fetch("/api/leads", {
-      method: "POST",
-      body: JSON.stringify({ name, email, phone: phone || undefined }),
-      headers: { "Content-Type": "application/json" },
-    });
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        body: JSON.stringify({ name, email, phone: phone || undefined }),
+        headers: { "Content-Type": "application/json" },
+      });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "No pudimos enviar tu solicitud. Intenta de nuevo.");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "No pudimos enviar tu solicitud. Intenta de nuevo.");
+        setStatus("error");
+        return;
+      }
+
+      setStatus("sent");
+    } catch {
+      setError("No pudimos enviar tu solicitud. Verifica tu conexión e intenta de nuevo.");
       setStatus("error");
-      return;
     }
-
-    setStatus("sent");
   }
 
   return (
