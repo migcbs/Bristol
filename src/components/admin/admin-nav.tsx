@@ -9,6 +9,7 @@ const MODULES = [
   { href: "/admin/cobranzas", label: "Cobranzas" },
   { href: "/admin/reinscripciones", label: "Reinscripciones" },
   { href: "/admin/incidencias", label: "Incidencias" },
+  { href: "/admin/comunicaciones", label: "Comunicaciones" },
 ];
 
 export function AdminNav() {
