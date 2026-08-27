@@ -23,26 +23,36 @@ export async function POST(
     return Response.json({ error: "No encontrado" }, { status: 404 });
   }
 
-  if (invoice.status !== "PENDING") {
+  if (invoice.status === "PAID" || invoice.status === "CANCELED") {
     return Response.json({ error: "Este cargo no se puede pagar" }, { status: 400 });
   }
 
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-  const checkoutSession = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: "mxn",
-          product_data: { name: invoice.description },
-          unit_amount: invoice.amountCents,
+  let checkoutSession;
+  try {
+    checkoutSession = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "mxn",
+            product_data: { name: invoice.description },
+            unit_amount: invoice.amountCents,
+          },
+          quantity: 1,
         },
-        quantity: 1,
-      },
-    ],
-    success_url: `${baseUrl}/portal/cobranzas?paid=1`,
-    cancel_url: `${baseUrl}/portal/cobranzas`,
-  });
+      ],
+      success_url: `${baseUrl}/portal/cobranzas?paid=1`,
+      cancel_url: `${baseUrl}/portal/cobranzas`,
+      metadata: { invoiceId: invoice.id },
+    });
+  } catch (err) {
+    console.error("Error creating Stripe checkout session", err);
+    return Response.json(
+      { error: "No se pudo iniciar el pago con Stripe" },
+      { status: 502 }
+    );
+  }
 
   await prisma.invoice.update({
     where: { id },
