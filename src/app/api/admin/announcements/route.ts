@@ -3,7 +3,7 @@ import { getCampusScope } from "@/lib/campus-scope";
 import { resolveAnnouncementRecipients } from "@/lib/announcement-scope";
 import { sendAnnouncementEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
-import type { Role } from "@prisma/client";
+import type { Prisma, Role } from "@prisma/client";
 
 const VALID_ROLES: Role[] = ["ADMIN", "STAFF", "TEACHER", "STUDENT", "PARENT"];
 
@@ -84,4 +84,28 @@ export async function POST(request: Request) {
   }
 
   return Response.json(announcement, { status: 201 });
+}
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return Response.json({ error: "No autenticado" }, { status: 401 });
+  }
+  const role = (session.user as { role: Role }).role;
+  if (role !== "ADMIN" && role !== "STAFF") {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const where: Prisma.AnnouncementWhereInput =
+    role === "ADMIN"
+      ? {}
+      : { OR: [{ createdById: (session.user as { id: string }).id }, { audience: "ALL" }] };
+
+  const announcements = await prisma.announcement.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: { createdBy: { select: { id: true, name: true } }, campus: true },
+  });
+
+  return Response.json(announcements);
 }
