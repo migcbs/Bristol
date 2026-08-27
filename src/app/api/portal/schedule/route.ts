@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getVisibleGroupIds } from "@/lib/academic-access";
 
 interface SlotInput {
   dayOfWeek: number;
@@ -61,4 +62,33 @@ export async function POST(request: Request) {
   });
 
   return Response.json({ ok: true }, { status: 201 });
+}
+
+export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return Response.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const groupId = searchParams.get("groupId");
+
+  const visibleGroupIds = await getVisibleGroupIds(session.user as { id: string; role: any });
+
+  if (groupId) {
+    if (!visibleGroupIds.includes(groupId)) {
+      return Response.json({ error: "No encontrado" }, { status: 404 });
+    }
+    const slots = await prisma.scheduleSlot.findMany({
+      where: { groupId },
+      orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+    });
+    return Response.json(slots);
+  }
+
+  const slots = await prisma.scheduleSlot.findMany({
+    where: { groupId: { in: visibleGroupIds } },
+    orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+  });
+  return Response.json(slots);
 }
