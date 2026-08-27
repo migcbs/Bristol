@@ -9,6 +9,9 @@ const MODULES = [
   { href: "/portal/asistencia", label: "Asistencia" },
   { href: "/portal/incidencias", label: "Incidencias" },
   { href: "/portal/comunicaciones", label: "Comunicaciones" },
+  { href: "/portal/horario", label: "Horario" },
+  { href: "/portal/materiales", label: "Materiales" },
+  { href: "/portal/calificaciones", label: "Calificaciones" },
 ];
 
 export function PortalNav() {
