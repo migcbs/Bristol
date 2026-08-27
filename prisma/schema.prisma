@@ -30,6 +30,7 @@ model Campus {
   teachers TeacherCampus[]
   students Student[]
   groups   Group[]
+  leads    Lead[]
 }
 
 model User {
@@ -135,4 +136,16 @@ model VerificationToken {
   createdAt DateTime     @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String?
+  campusId  String?
+  createdAt DateTime @default(now())
+
+  campus Campus? @relation(fields: [campusId], references: [id])
 }
