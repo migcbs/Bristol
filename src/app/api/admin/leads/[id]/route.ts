@@ -44,6 +44,15 @@ export async function PATCH(
   }
 
   const scope = await getCampusScope(session.user as { id: string; role: any });
+
+  if (
+    body.campusId !== undefined &&
+    scope.type === "CAMPUS_LIST" &&
+    !scope.campusIds.includes(body.campusId)
+  ) {
+    return Response.json({ error: "Plantel fuera de tu alcance" }, { status: 400 });
+  }
+
   const inScope =
     scope.type === "ALL" ||
     (scope.type === "CAMPUS_LIST" &&

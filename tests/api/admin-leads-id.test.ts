@@ -76,6 +76,17 @@ describe("PATCH /api/admin/leads/[id]", () => {
     });
   });
 
+  it("returns 400 when a STAFF user targets a campusId outside their scope", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u2", role: "STAFF" } });
+    (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
+    (prisma.lead.findUnique as any).mockResolvedValue({ id: "l1", campusId: "c1" });
+    (prisma.campus.findUnique as any).mockResolvedValue({ id: "c2" });
+
+    const res = await PATCH(patchRequest({ campusId: "c2" }), ctx);
+    expect(res.status).toBe(400);
+    expect(prisma.lead.update).not.toHaveBeenCalled();
+  });
+
   it("updates campusId for an unassigned lead within scope (STAFF claiming it)", async () => {
     (auth as any).mockResolvedValue({ user: { id: "u2", role: "STAFF" } });
     (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
