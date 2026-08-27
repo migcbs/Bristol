@@ -5,11 +5,14 @@ import { Section } from "@/components/ui/section";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LEAD_SOURCE_LABELS } from "@/lib/lead-source";
+import type { LeadSource } from "@prisma/client";
 
 export function LeadForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [source, setSource] = useState<LeadSource>("OTRO");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +24,7 @@ export function LeadForm() {
     try {
       const res = await fetch("/api/leads", {
         method: "POST",
-        body: JSON.stringify({ name, email, phone: phone || undefined }),
+        body: JSON.stringify({ name, email, phone: phone || undefined, source }),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -104,6 +107,23 @@ export function LeadForm() {
                   onChange={(e) => setPhone(e.target.value)}
                   className="mt-1"
                 />
+              </div>
+              <div>
+                <label htmlFor="lead-source" className="text-sm font-medium text-muted">
+                  ¿Cómo te enteraste de nosotros?
+                </label>
+                <select
+                  id="lead-source"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value as LeadSource)}
+                  className="mt-1 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition-shadow duration-150 focus:border-primary focus:ring-2 focus:ring-primary/30"
+                >
+                  {Object.entries(LEAD_SOURCE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
               {error && (
                 <p role="alert" className="text-sm text-accent-dark">
