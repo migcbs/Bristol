@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getCampusScope, leadScopeWhere } from "@/lib/campus-scope";
-import { prisma } from "@/lib/prisma";
+import { getLeadMarketingSummary } from "@/lib/lead-marketing";
 import { Card } from "@/components/ui/card";
 import { LEAD_STATUS_LABELS } from "@/lib/lead-status";
 import { LEAD_SOURCE_LABELS } from "@/lib/lead-source";
@@ -16,13 +16,10 @@ export default async function MercadotecniaPage() {
   const scope = await getCampusScope(session.user as { id: string; role: Role });
   const where = leadScopeWhere(scope);
 
-  const [statusGroups, sourceGroups] = await Promise.all([
-    prisma.lead.groupBy({ by: ["status"], where, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ["source"], where, _count: { _all: true } }),
-  ]);
+  const { byStatus: statusGroups, bySource: sourceGroups } = await getLeadMarketingSummary(where);
 
-  const total = statusGroups.reduce((sum, g) => sum + g._count._all, 0);
-  const enrolled = statusGroups.find((g) => g.status === "ENROLLED")?._count._all ?? 0;
+  const total = statusGroups.reduce((sum, g) => sum + g.count, 0);
+  const enrolled = statusGroups.find((g) => g.status === "ENROLLED")?.count ?? 0;
   const conversionRate = total > 0 ? Math.round((enrolled / total) * 100) : 0;
 
   return (
@@ -54,7 +51,7 @@ export default async function MercadotecniaPage() {
             {statusGroups.map((g) => (
               <div key={g.status} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
                 <span>{LEAD_STATUS_LABELS[g.status]}</span>
-                <span className="font-semibold">{g._count._all}</span>
+                <span className="font-semibold">{g.count}</span>
               </div>
             ))}
             {statusGroups.length === 0 && <p className="text-sm text-muted">Sin datos.</p>}
@@ -67,7 +64,7 @@ export default async function MercadotecniaPage() {
             {sourceGroups.map((g) => (
               <div key={g.source} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
                 <span>{LEAD_SOURCE_LABELS[g.source]}</span>
-                <span className="font-semibold">{g._count._all}</span>
+                <span className="font-semibold">{g.count}</span>
               </div>
             ))}
             {sourceGroups.length === 0 && <p className="text-sm text-muted">Sin datos.</p>}
