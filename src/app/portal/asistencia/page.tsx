@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { AttendanceForm } from "@/components/portal/attendance-form";
 
+const STATUS_LABELS: Record<string, string> = {
+  PRESENT: "Presente",
+  ABSENT: "Ausente",
+  LATE: "Retardo",
+  EXCUSED: "Justificado",
+};
+
 export default async function AsistenciaPage({
   searchParams,
 }: {
@@ -22,8 +29,13 @@ export default async function AsistenciaPage({
   });
 
   const params = await searchParams;
-  const selectedGroupId = params.groupId ?? groups[0]?.id;
-  const date = params.date ?? new Date().toISOString().slice(0, 10);
+  const requestedGroupId = params.groupId;
+  const selectedGroupId = groups.some((g) => g.id === requestedGroupId)
+    ? requestedGroupId
+    : groups[0]?.id;
+  const date =
+    params.date ??
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
 
   if (!selectedGroupId) {
     return (
@@ -36,12 +48,14 @@ export default async function AsistenciaPage({
 
   const enrollments = await prisma.enrollment.findMany({
     where: { groupId: selectedGroupId, completedAt: null },
-    include: { student: { include: { user: true } } },
+    include: { student: { include: { user: { select: { id: true, name: true } } } } },
   });
 
   const existing = await prisma.attendanceRecord.findMany({
     where: { date: new Date(date), enrollment: { groupId: selectedGroupId } },
   });
+
+  const existingByEnrollmentId = new Map(existing.map((r) => [r.enrollmentId, r.status]));
 
   return (
     <div>
@@ -69,9 +83,19 @@ export default async function AsistenciaPage({
         {existing.length > 0 ? (
           <Card>
             <p className="text-sm text-muted">
-              Ya existe asistencia guardada para esta fecha. Los registros de asistencia son
-              definitivos y no se pueden modificar.
+              Ya existe asistencia guardada para esta fecha (de solo lectura). Los registros de
+              asistencia son definitivos y no se pueden modificar.
             </p>
+            <div className="mt-4 divide-y divide-border rounded-lg border border-border bg-white">
+              {enrollments.map((e) => (
+                <div key={e.id} className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm font-medium">{e.student.user.name}</span>
+                  <span className="text-sm text-muted">
+                    {STATUS_LABELS[existingByEnrollmentId.get(e.id) ?? ""] ?? "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
           </Card>
         ) : (
           <AttendanceForm

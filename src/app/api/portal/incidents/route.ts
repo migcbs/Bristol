@@ -1,6 +1,9 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@prisma/client";
+
+const MAX_DESCRIPTION_LENGTH = 2000;
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -21,6 +24,17 @@ export async function POST(request: Request) {
 
   if (!body.studentId || !body.description) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+
+  const description = body.description.trim();
+  if (!description) {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    return Response.json(
+      { error: `La descripción no puede exceder ${MAX_DESCRIPTION_LENGTH} caracteres` },
+      { status: 400 }
+    );
   }
 
   const userId = (session.user as { id: string }).id;
@@ -49,7 +63,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "No encontrado" }, { status: 404 });
     }
 
-    const scope = await getCampusScope(session.user as { id: string; role: any });
+    const scope = await getCampusScope(session.user as { id: string; role: Role });
     const inScope =
       scope.type === "ALL" ||
       (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(student.campusId));
@@ -63,7 +77,7 @@ export async function POST(request: Request) {
       studentId: body.studentId,
       groupId: body.groupId ?? null,
       reportedById: userId,
-      description: body.description,
+      description,
     },
   });
 

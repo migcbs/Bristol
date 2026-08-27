@@ -44,6 +44,24 @@ export function enrollmentScopeWhere(scope: CampusScope): Prisma.EnrollmentWhere
   }
 }
 
+/**
+ * Builds a Prisma `where` clause for Incident queries from a CampusScope.
+ * Deny-by-default for any scope variant that isn't explicitly handled, so
+ * unrecognized/future scopes fail closed.
+ */
+export function incidentScopeWhere(scope: CampusScope): Prisma.IncidentWhereInput {
+  switch (scope.type) {
+    case "ALL":
+      return {};
+    case "CAMPUS_LIST":
+      return { student: { campusId: { in: scope.campusIds } } };
+    case "SINGLE_CAMPUS":
+    case "NONE":
+    default:
+      return { id: { in: [] } };
+  }
+}
+
 export async function getCampusScope(user: { id: string; role: Role }): Promise<CampusScope> {
   switch (user.role) {
     case "ADMIN":

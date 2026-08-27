@@ -17,7 +17,7 @@ export default async function IncidenciasPage() {
     include: {
       enrollments: {
         where: { completedAt: null },
-        include: { student: { include: { user: true } } },
+        include: { student: { include: { user: { select: { id: true, name: true } } } } },
       },
     },
   });
@@ -29,7 +29,7 @@ export default async function IncidenciasPage() {
   const incidents = await prisma.incident.findMany({
     where: { reportedById: userId },
     orderBy: { createdAt: "desc" },
-    include: { student: { include: { user: true } } },
+    include: { student: { include: { user: { select: { id: true, name: true } } } } },
   });
 
   return (
