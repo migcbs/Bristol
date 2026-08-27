@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getVisibleGroupIds } from "@/lib/academic-access";
+import type { Role } from "@prisma/client";
 
 interface SlotInput {
   dayOfWeek: number;
@@ -9,7 +10,13 @@ interface SlotInput {
 }
 
 function isValidSlot(slot: SlotInput): boolean {
-  if (typeof slot.dayOfWeek !== "number" || slot.dayOfWeek < 0 || slot.dayOfWeek > 6) return false;
+  if (
+    typeof slot.dayOfWeek !== "number" ||
+    !Number.isInteger(slot.dayOfWeek) ||
+    slot.dayOfWeek < 0 ||
+    slot.dayOfWeek > 6
+  )
+    return false;
   if (typeof slot.startTime !== "string" || typeof slot.endTime !== "string") return false;
   return slot.startTime < slot.endTime;
 }
@@ -73,7 +80,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const groupId = searchParams.get("groupId");
 
-  const visibleGroupIds = await getVisibleGroupIds(session.user as { id: string; role: any });
+  const visibleGroupIds = await getVisibleGroupIds(session.user as { id: string; role: Role });
 
   if (groupId) {
     if (!visibleGroupIds.includes(groupId)) {

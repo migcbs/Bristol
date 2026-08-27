@@ -57,6 +57,23 @@ describe("POST /api/portal/materials", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when the description exceeds the length cap", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", teacherId: "t1" });
+    const res = await POST(jsonRequest({ ...VALID_BODY, description: "x".repeat(2001) }));
+    expect(res.status).toBe(400);
+    expect(prisma.material.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the url exceeds the length cap", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", teacherId: "t1" });
+    const longUrl = "https://drive.google.com/" + "x".repeat(2048);
+    const res = await POST(jsonRequest({ ...VALID_BODY, url: longUrl }));
+    expect(res.status).toBe(400);
+    expect(prisma.material.create).not.toHaveBeenCalled();
+  });
+
   it("creates the material on success, trimming the title", async () => {
     (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
     (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", teacherId: "t1" });

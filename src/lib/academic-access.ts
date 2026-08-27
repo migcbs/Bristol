@@ -49,7 +49,7 @@ export async function getVisibleEnrollmentIds(user: { id: string; role: Role }):
   switch (user.role) {
     case "TEACHER": {
       const rows = await prisma.enrollment.findMany({
-        where: { completedAt: null, group: { teacherId: user.id } },
+        where: { group: { teacherId: user.id } },
         select: { id: true },
       });
       return rows.map((r) => r.id);
@@ -61,14 +61,14 @@ export async function getVisibleEnrollmentIds(user: { id: string; role: Role }):
       });
       if (!student) return [];
       const rows = await prisma.enrollment.findMany({
-        where: { studentId: student.id, completedAt: null },
+        where: { studentId: student.id },
         select: { id: true },
       });
       return rows.map((r) => r.id);
     }
     case "PARENT": {
       const rows = await prisma.enrollment.findMany({
-        where: { completedAt: null, student: { parentLinks: { some: { parentUserId: user.id } } } },
+        where: { student: { parentLinks: { some: { parentUserId: user.id } } } },
         select: { id: true },
       });
       return rows.map((r) => r.id);

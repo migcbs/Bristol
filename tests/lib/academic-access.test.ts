@@ -57,32 +57,32 @@ describe("getVisibleGroupIds", () => {
 describe("getVisibleEnrollmentIds", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("TEACHER sees active enrollments in their own groups", async () => {
+  it("TEACHER sees all enrollments (active and completed) in their own groups", async () => {
     (prisma.enrollment.findMany as any).mockResolvedValue([{ id: "e1" }]);
     const ids = await getVisibleEnrollmentIds({ id: "t1", role: "TEACHER" as any });
     expect(prisma.enrollment.findMany).toHaveBeenCalledWith({
-      where: { completedAt: null, group: { teacherId: "t1" } },
+      where: { group: { teacherId: "t1" } },
       select: { id: true },
     });
     expect(ids).toEqual(["e1"]);
   });
 
-  it("STUDENT sees their own active enrollments", async () => {
+  it("STUDENT sees all their own enrollments (active and completed)", async () => {
     (prisma.student.findUnique as any).mockResolvedValue({ id: "s1" });
     (prisma.enrollment.findMany as any).mockResolvedValue([{ id: "e1" }]);
     const ids = await getVisibleEnrollmentIds({ id: "u1", role: "STUDENT" as any });
     expect(prisma.enrollment.findMany).toHaveBeenCalledWith({
-      where: { studentId: "s1", completedAt: null },
+      where: { studentId: "s1" },
       select: { id: true },
     });
     expect(ids).toEqual(["e1"]);
   });
 
-  it("PARENT sees active enrollments of all their children", async () => {
+  it("PARENT sees all enrollments (active and completed) of all their children", async () => {
     (prisma.enrollment.findMany as any).mockResolvedValue([{ id: "e1" }, { id: "e2" }]);
     const ids = await getVisibleEnrollmentIds({ id: "p1", role: "PARENT" as any });
     expect(prisma.enrollment.findMany).toHaveBeenCalledWith({
-      where: { completedAt: null, student: { parentLinks: { some: { parentUserId: "p1" } } } },
+      where: { student: { parentLinks: { some: { parentUserId: "p1" } } } },
       select: { id: true },
     });
     expect(ids).toEqual(["e1", "e2"]);

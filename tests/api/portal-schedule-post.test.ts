@@ -59,6 +59,16 @@ describe("POST /api/portal/schedule", () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it("returns 400 when a slot has a fractional dayOfWeek", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", teacherId: "t1" });
+    const res = await POST(
+      jsonRequest({ groupId: "g1", slots: [{ dayOfWeek: 1.5, startTime: "16:00", endTime: "18:00" }] })
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when startTime is not before endTime", async () => {
     (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
     (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", teacherId: "t1" });
