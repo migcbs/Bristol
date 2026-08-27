@@ -2,25 +2,44 @@
 
 :root {
   --color-primary: #2b2b7a;
+  --color-primary-dark: #1c1c56;
   --color-primary-foreground: #ffffff;
   --color-accent: #e63329;
+  --color-accent-dark: #b8281f;
   --color-accent-foreground: #ffffff;
   --color-bg: #ffffff;
   --color-surface: #f5f5f7;
   --color-text: #1a1a1a;
+  --color-muted: #5b5b6b;
   --color-border: #e2e2e6;
 }
 
 @theme inline {
   --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
   --color-primary-foreground: var(--color-primary-foreground);
   --color-accent: var(--color-accent);
+  --color-accent-dark: var(--color-accent-dark);
   --color-accent-foreground: var(--color-accent-foreground);
   --color-surface: var(--color-surface);
+  --color-muted: var(--color-muted);
   --color-border: var(--color-border);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+
+  --tracking-tightest: -0.04em;
 }
 
 body {
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }

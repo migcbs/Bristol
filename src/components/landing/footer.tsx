@@ -1,18 +1,29 @@
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-surface px-6 py-10 text-sm text-gray-600">
-      <div className="mx-auto flex max-w-5xl flex-col gap-4 md:flex-row md:justify-between">
+    <footer className="bg-primary-dark px-6 py-14 text-sm text-white/60">
+      <div className="mx-auto flex max-w-6xl flex-col gap-10 md:flex-row md:justify-between">
         <div>
-          <p className="font-bold text-primary">Bristol — Inglés Profesional</p>
-          <p>Contacto: hola@bristol-ingles.com · (55) 0000 0000</p>
+          <p className="flex items-center gap-2 font-display text-lg font-bold text-white">
+            Bristol
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+          </p>
+          <p className="mt-3 max-w-xs">Inglés profesional, presencial, por niveles CEFR.</p>
+          <p className="mt-4">hola@bristol-ingles.com</p>
+          <p>(55) 0000 0000</p>
         </div>
-        <div className="flex gap-6">
-          <a href="/programas" className="hover:text-primary">Programas</a>
-          <a href="/planteles" className="hover:text-primary">Planteles</a>
-          <a href="/precios" className="hover:text-primary">Precios</a>
+        <div className="grid grid-cols-3 gap-6 md:gap-16">
+          <a href="/programas" className="transition-colors hover:text-white">
+            Programas
+          </a>
+          <a href="/planteles" className="transition-colors hover:text-white">
+            Planteles
+          </a>
+          <a href="/precios" className="transition-colors hover:text-white">
+            Precios
+          </a>
         </div>
       </div>
-      <p className="mt-6 text-xs text-gray-400">
+      <p className="mx-auto mt-12 max-w-6xl border-t border-white/10 pt-6 text-xs text-white/40">
         © {new Date().getFullYear()} Bristol. Todos los derechos reservados.
       </p>
     </footer>

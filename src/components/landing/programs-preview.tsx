@@ -2,8 +2,7 @@
 
 import type { Level } from "@prisma/client";
 import { Section } from "@/components/ui/section";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const LEVEL_DESCRIPTIONS: Record<string, string> = {
   A1: "Primeros pasos: saludos, presentaciones y frases cotidianas.",
@@ -15,28 +14,42 @@ const LEVEL_DESCRIPTIONS: Record<string, string> = {
 };
 
 export function ProgramsPreview({ levels }: { levels: Level[] }) {
-  const featured = levels.slice(0, 3);
-
   return (
     <Section id="programas">
-      <h2 className="text-center text-3xl font-bold text-primary">Nuestros programas</h2>
-      <p className="mx-auto mt-2 max-w-xl text-center text-gray-600">
-        Seis niveles alineados al Marco Común Europeo de Referencia (CEFR).
-      </p>
-      <div className="mx-auto mt-10 grid max-w-4xl gap-6 md:grid-cols-3">
-        {featured.map((level) => (
-          <Card key={level.id}>
-            <Badge tone="primary">{level.code}</Badge>
-            <h3 className="mt-3 text-lg font-semibold">{level.name}</h3>
-            <p className="mt-2 text-sm text-gray-600">
+      <div className="mx-auto max-w-3xl text-center">
+        <h2 className="text-3xl font-bold text-primary md:text-4xl">
+          Un camino claro, nivel por nivel
+        </h2>
+        <p className="mt-3 text-muted">
+          Seis niveles alineados al Marco Común Europeo de Referencia (CEFR).
+          Cada uno te prepara para avanzar con confianza al siguiente.
+        </p>
+      </div>
+
+      <div className="mx-auto mt-14 flex max-w-4xl items-end justify-between gap-2 md:gap-4">
+        {levels.map((level, i) => (
+          <div key={level.id} className="group flex flex-1 flex-col items-center gap-3">
+            <p className="max-w-[7rem] text-center text-xs text-muted opacity-0 transition-opacity duration-200 group-hover:opacity-100 md:text-sm">
               {LEVEL_DESCRIPTIONS[level.code] ?? ""}
             </p>
-          </Card>
+            <div
+              className="w-full rounded-t-md transition-all duration-300 group-hover:brightness-110"
+              style={{
+                height: `${56 + i * 26}px`,
+                background:
+                  i === levels.length - 1
+                    ? "var(--color-accent)"
+                    : `color-mix(in srgb, var(--color-primary) ${30 + i * 14}%, white)`,
+              }}
+            />
+            <span className="font-display text-sm font-bold text-primary">{level.code}</span>
+          </div>
         ))}
       </div>
-      <div className="mt-8 text-center">
-        <a href="/programas" className="font-medium text-primary hover:underline">
-          Ver todos los niveles →
+
+      <div className="mt-12 text-center">
+        <a href="/programas">
+          <Button variant="outline">Ver todos los niveles</Button>
         </a>
       </div>
     </Section>
