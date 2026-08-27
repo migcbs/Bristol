@@ -1,14 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { LeadStatus } from "@prisma/client";
-
-const STATUS_LABELS: Record<LeadStatus, string> = {
-  NEW: "Nuevo",
-  CONTACTED: "Contactado",
-  ENROLLED: "Inscrito",
-  LOST: "Perdido",
-};
+import { LEAD_STATUS_LABELS } from "@/lib/lead-status";
 
 export function LeadRowActions({
   leadId,
@@ -21,11 +16,12 @@ export function LeadRowActions({
   initialCampusId: string | null;
   campuses: { id: string; name: string }[];
 }) {
+  const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [campusId, setCampusId] = useState(initialCampusId ?? "");
   const [error, setError] = useState<string | null>(null);
 
-  async function update(data: { status?: LeadStatus; campusId?: string }) {
+  async function update(data: { status?: LeadStatus; campusId?: string | null }) {
     setError(null);
     const res = await fetch(`/api/admin/leads/${leadId}`, {
       method: "PATCH",
@@ -37,6 +33,7 @@ export function LeadRowActions({
       setError(body.error ?? "No se pudo actualizar");
       return false;
     }
+    router.refresh();
     return true;
   }
 
@@ -52,7 +49,7 @@ export function LeadRowActions({
     const next = e.target.value;
     const previous = campusId;
     setCampusId(next);
-    const ok = await update({ campusId: next });
+    const ok = await update({ campusId: next === "" ? null : next });
     if (!ok) setCampusId(previous);
   }
 
@@ -62,9 +59,10 @@ export function LeadRowActions({
         <select
           value={status}
           onChange={handleStatusChange}
+          aria-label="Estatus"
           className="rounded-md border border-border px-2 py-1 text-xs"
         >
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
+          {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
@@ -73,6 +71,7 @@ export function LeadRowActions({
         <select
           value={campusId}
           onChange={handleCampusChange}
+          aria-label="Plantel"
           className="rounded-md border border-border px-2 py-1 text-xs"
         >
           <option value="">Sin asignar</option>
