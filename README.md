@@ -15,10 +15,19 @@ nvm use
    ```
 
 2. Copy the environment template and fill in `DATABASE_URL` (and the other
-   values, e.g. `NEXTAUTH_SECRET`, `RESEND_API_KEY`) for your machine:
+   values, e.g. `NEXTAUTH_SECRET`, `RESEND_API_KEY`, `STRIPE_SECRET_KEY`,
+   `STRIPE_WEBHOOK_SECRET`) for your machine:
 
    ```bash
    cp .env.example .env
+   ```
+
+   Checkout is inert while `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` are
+   left as placeholders. Once you have real keys, forward webhook events to
+   your local server with the Stripe CLI:
+
+   ```bash
+   stripe listen --forward-to localhost:3000/api/webhooks/stripe
    ```
 
 3. Install dependencies, run migrations, seed the database, and start the dev

@@ -21,6 +21,11 @@ export function PayButton({ invoiceId }: { invoiceId: string }) {
     }
 
     const { url } = await res.json();
+    if (!url) {
+      setError("No se pudo iniciar el pago");
+      setLoading(false);
+      return;
+    }
     window.location.href = url;
   }
 
