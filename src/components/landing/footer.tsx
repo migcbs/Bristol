@@ -23,7 +23,7 @@ export function Footer() {
           </a>
         </div>
       </div>
-      <p className="mx-auto mt-12 max-w-6xl border-t border-white/10 pt-6 text-xs text-white/40">
+      <p className="mx-auto mt-12 max-w-6xl border-t border-white/10 pt-6 text-xs text-white/55">
         © {new Date().getFullYear()} Bristol. Todos los derechos reservados.
       </p>
     </footer>

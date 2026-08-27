@@ -16,19 +16,41 @@ export async function POST(request: Request) {
     return Response.json({ error: "Cuerpo de la solicitud inválido" }, { status: 400 });
   }
 
-  const { name, email, phone, message, campusId } = body;
+  const { phone, message, campusId } = body;
+  const trimmedName = body.name?.trim();
+  const trimmedEmail = body.email?.trim();
 
-  if (!name || !email) {
+  if (!trimmedName || !trimmedEmail) {
     return Response.json({ error: "Nombre y correo son requeridos" }, { status: 400 });
   }
 
-  if (!isValidEmail(email)) {
+  if (!isValidEmail(trimmedEmail)) {
     return Response.json({ error: "Correo electrónico inválido" }, { status: 400 });
   }
 
-  const lead = await prisma.lead.create({
-    data: { name, email, phone, message, campusId },
-  });
+  if (
+    trimmedName.length > 120 ||
+    trimmedEmail.length > 254 ||
+    (phone && phone.length > 30) ||
+    (message && message.length > 2000)
+  ) {
+    return Response.json({ error: "Uno o más campos exceden la longitud permitida" }, { status: 400 });
+  }
 
-  return Response.json(lead, { status: 201 });
+  if (campusId !== undefined && (typeof campusId !== "string" || campusId.length === 0)) {
+    return Response.json({ error: "Plantel inválido" }, { status: 400 });
+  }
+
+  try {
+    const lead = await prisma.lead.create({
+      data: { name: trimmedName, email: trimmedEmail, phone, message, campusId },
+    });
+
+    return Response.json(lead, { status: 201 });
+  } catch {
+    return Response.json(
+      { error: "No pudimos registrar tu solicitud. Verifica los datos e intenta de nuevo." },
+      { status: 400 }
+    );
+  }
 }
