@@ -20,21 +20,25 @@ export function ReenrollRowActions({
     setSubmitting(true);
     setError(null);
 
-    const res = await fetch("/api/admin/reinscripciones", {
-      method: "POST",
-      body: JSON.stringify({ enrollmentId, newGroupId: groupId }),
-      headers: { "Content-Type": "application/json" },
-    });
+    try {
+      const res = await fetch("/api/admin/reinscripciones", {
+        method: "POST",
+        body: JSON.stringify({ enrollmentId, newGroupId: groupId }),
+        headers: { "Content-Type": "application/json" },
+      });
 
-    setSubmitting(false);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "No se pudo reinscribir");
+        return;
+      }
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "No se pudo reinscribir");
-      return;
+      await router.refresh();
+    } catch {
+      setError("No se pudo reinscribir");
+    } finally {
+      setSubmitting(false);
     }
-
-    router.refresh();
   }
 
   return (
