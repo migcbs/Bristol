@@ -1,0 +1,90 @@
+import { auth } from "@/lib/auth";
+import { getCampusScope } from "@/lib/campus-scope";
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+
+function assertAdminOrStaff(role: string) {
+  return role === "ADMIN" || role === "STAFF";
+}
+
+export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return Response.json({ error: "No autenticado" }, { status: 401 });
+  }
+  const role = (session.user as { role: string }).role;
+  if (!assertAdminOrStaff(role)) {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  let body: {
+    studentId?: string;
+    description?: string;
+    amountCents?: number;
+    dueDate?: string;
+  };
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Cuerpo de la solicitud inválido" }, { status: 400 });
+  }
+
+  if (
+    !body.studentId ||
+    !body.description ||
+    typeof body.amountCents !== "number" ||
+    body.amountCents <= 0 ||
+    !body.dueDate
+  ) {
+    return Response.json({ error: "Datos de cargo inválidos" }, { status: 400 });
+  }
+
+  const student = await prisma.student.findUnique({ where: { id: body.studentId } });
+  if (!student) {
+    return Response.json({ error: "No encontrado" }, { status: 404 });
+  }
+
+  const scope = await getCampusScope(session.user as { id: string; role: any });
+  const inScope = scope.type === "ALL" || (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(student.campusId));
+  if (!inScope) {
+    return Response.json({ error: "No encontrado" }, { status: 404 });
+  }
+
+  const invoice = await prisma.invoice.create({
+    data: {
+      studentId: body.studentId,
+      description: body.description,
+      amountCents: body.amountCents,
+      dueDate: new Date(body.dueDate),
+    },
+  });
+
+  return Response.json(invoice, { status: 201 });
+}
+
+export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return Response.json({ error: "No autenticado" }, { status: 401 });
+  }
+  const role = (session.user as { role: string }).role;
+  if (!assertAdminOrStaff(role)) {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const scope = await getCampusScope(session.user as { id: string; role: any });
+  const where: Prisma.InvoiceWhereInput =
+    scope.type === "ALL"
+      ? {}
+      : scope.type === "CAMPUS_LIST"
+        ? { student: { campusId: { in: scope.campusIds } } }
+        : { id: { in: [] } };
+
+  const invoices = await prisma.invoice.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: { student: { include: { user: true, campus: true } } },
+  });
+
+  return Response.json(invoices);
+}
