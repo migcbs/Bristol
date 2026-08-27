@@ -65,6 +65,8 @@ model User {
   teachingGroups       Group[]             @relation("GroupTeacher")
   reportedIncidents    Incident[]
   createdAnnouncements Announcement[]
+  uploadedMaterials    Material[]
+  createdGrades        Grade[]
 }
 
 model StaffCampus {
@@ -148,11 +150,13 @@ model Group {
   name      String
   createdAt DateTime @default(now())
 
-  campus      Campus       @relation(fields: [campusId], references: [id])
-  level       Level        @relation(fields: [levelId], references: [id])
-  teacher     User         @relation("GroupTeacher", fields: [teacherId], references: [id])
-  enrollments Enrollment[]
-  incidents   Incident[]
+  campus        Campus         @relation(fields: [campusId], references: [id])
+  level         Level          @relation(fields: [levelId], references: [id])
+  teacher       User           @relation("GroupTeacher", fields: [teacherId], references: [id])
+  enrollments   Enrollment[]
+  incidents     Incident[]
+  scheduleSlots ScheduleSlot[]
+  materials     Material[]
 }
 
 // NOTE: the database also has a partial unique index enforcing "at most one
@@ -171,6 +175,7 @@ model Enrollment {
   student           Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
   group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
   attendanceRecords AttendanceRecord[]
+  grades            Grade[]
 }
 
 model VerificationToken {
@@ -242,4 +247,41 @@ model Announcement {
 
   campus    Campus? @relation(fields: [campusId], references: [id])
   createdBy User    @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model ScheduleSlot {
+  id        String   @id @default(cuid())
+  groupId   String
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model Material {
+  id           String   @id @default(cuid())
+  groupId      String
+  title        String
+  url          String
+  description  String?
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  group      Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  uploadedBy User  @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+}
+
+model Grade {
+  id           String   @id @default(cuid())
+  enrollmentId String
+  title        String
+  score        Int
+  maxScore     Int      @default(100)
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
 }
