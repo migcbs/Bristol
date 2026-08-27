@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getVisibleEnrollmentIds } from "@/lib/academic-access";
 import { prisma } from "@/lib/prisma";
 
 const MAX_TITLE_LENGTH = 200;
@@ -67,4 +68,33 @@ export async function POST(request: Request) {
   });
 
   return Response.json(grade, { status: 201 });
+}
+
+export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return Response.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const enrollmentId = searchParams.get("enrollmentId");
+
+  const visibleEnrollmentIds = await getVisibleEnrollmentIds(session.user as { id: string; role: any });
+
+  if (enrollmentId) {
+    if (!visibleEnrollmentIds.includes(enrollmentId)) {
+      return Response.json({ error: "No encontrado" }, { status: 404 });
+    }
+    const grades = await prisma.grade.findMany({
+      where: { enrollmentId },
+      orderBy: { createdAt: "desc" },
+    });
+    return Response.json(grades);
+  }
+
+  const grades = await prisma.grade.findMany({
+    where: { enrollmentId: { in: visibleEnrollmentIds } },
+    orderBy: { createdAt: "desc" },
+  });
+  return Response.json(grades);
 }
