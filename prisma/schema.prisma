@@ -81,6 +81,28 @@ model Student {
 
   parentLinks ParentStudent[]
   enrollments Enrollment[]
+  invoices    Invoice[]
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELED
+}
+
+model Invoice {
+  id                      String        @id @default(cuid())
+  studentId               String
+  description             String
+  amountCents             Int
+  dueDate                 DateTime
+  status                  InvoiceStatus @default(PENDING)
+  stripeCheckoutSessionId String?
+  paidAt                  DateTime?
+  createdAt               DateTime      @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model ParentStudent {
