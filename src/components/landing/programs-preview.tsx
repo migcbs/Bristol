@@ -31,7 +31,8 @@ export function ProgramsPreview({ levels }: { levels: Level[] }) {
           <div
             key={level.id}
             tabIndex={0}
-            className="group flex flex-1 flex-col items-center gap-3 outline-none"
+            aria-label={`Nivel ${level.code}: ${level.name}`}
+            className="group flex flex-1 flex-col items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             <p className="hidden max-w-[7rem] text-center text-xs text-muted transition-opacity duration-200 md:block md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:text-sm">
               {LEVEL_DESCRIPTIONS[level.code] ?? ""}
