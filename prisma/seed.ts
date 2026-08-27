@@ -3,9 +3,9 @@ import { prisma } from "../src/lib/prisma";
 import { hashPassword } from "../src/lib/password";
 
 async function main() {
-  const [campusNorte, campusSur] = await Promise.all([
-    prisma.campus.create({ data: { name: "Bristol Norte", address: "Av. Principal 100" } }),
-    prisma.campus.create({ data: { name: "Bristol Sur", address: "Av. Secundaria 200" } }),
+  const [campusCoatepec, campusXalapa] = await Promise.all([
+    prisma.campus.create({ data: { name: "Coatepec", address: "Coatepec, Veracruz" } }),
+    prisma.campus.create({ data: { name: "Xalapa", address: "Xalapa, Veracruz" } }),
   ]);
 
   const levels = await Promise.all(
@@ -31,25 +31,25 @@ async function main() {
     },
   });
 
-  const staffNorte = await prisma.user.create({
+  const staffCoatepec = await prisma.user.create({
     data: {
-      email: "staff.norte@bristol-ingles.com",
-      name: "Staff Norte",
+      email: "staff.coatepec@bristol-ingles.com",
+      name: "Staff Coatepec",
       role: "STAFF",
       passwordHash,
       emailVerifiedAt: new Date(),
-      staffCampuses: { create: { campusId: campusNorte.id } },
+      staffCampuses: { create: { campusId: campusCoatepec.id } },
     },
   });
 
-  const staffSur = await prisma.user.create({
+  const staffXalapa = await prisma.user.create({
     data: {
-      email: "staff.sur@bristol-ingles.com",
-      name: "Staff Sur",
+      email: "staff.xalapa@bristol-ingles.com",
+      name: "Staff Xalapa",
       role: "STAFF",
       passwordHash,
       emailVerifiedAt: new Date(),
-      staffCampuses: { create: { campusId: campusSur.id } },
+      staffCampuses: { create: { campusId: campusXalapa.id } },
     },
   });
 
@@ -61,15 +61,15 @@ async function main() {
       passwordHash,
       emailVerifiedAt: new Date(),
       teacherCampuses: {
-        create: [{ campusId: campusNorte.id }, { campusId: campusSur.id }],
+        create: [{ campusId: campusCoatepec.id }, { campusId: campusXalapa.id }],
       },
     },
   });
 
-  const groupA1Norte = await prisma.group.create({
+  const groupA1Coatepec = await prisma.group.create({
     data: {
       name: "A1 Matutino",
-      campusId: campusNorte.id,
+      campusId: campusCoatepec.id,
       levelId: levels[0].id,
       teacherId: teacherBoth.id,
     },
@@ -80,7 +80,7 @@ async function main() {
   await prisma.group.create({
     data: {
       name: "A2 Matutino",
-      campusId: campusNorte.id,
+      campusId: campusCoatepec.id,
       levelId: levels[1].id,
       teacherId: teacherBoth.id,
     },
@@ -93,13 +93,13 @@ async function main() {
       role: "STUDENT",
       passwordHash,
       emailVerifiedAt: new Date(),
-      student: { create: { campusId: campusNorte.id } },
+      student: { create: { campusId: campusCoatepec.id } },
     },
     include: { student: true },
   });
 
   await prisma.enrollment.create({
-    data: { studentId: studentUser.student!.id, groupId: groupA1Norte.id },
+    data: { studentId: studentUser.student!.id, groupId: groupA1Coatepec.id },
   });
 
   const parentUser = await prisma.user.create({
@@ -115,8 +115,8 @@ async function main() {
 
   console.log({
     admin: admin.email,
-    staffNorte: staffNorte.email,
-    staffSur: staffSur.email,
+    staffCoatepec: staffCoatepec.email,
+    staffXalapa: staffXalapa.email,
     teacherBoth: teacherBoth.email,
     student: studentUser.email,
     parent: parentUser.email,
