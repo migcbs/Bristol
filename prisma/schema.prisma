@@ -50,12 +50,12 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  staffCampuses   StaffCampus[]
-  teacherCampuses TeacherCampus[]
-  student         Student?
-  parentLinks     ParentStudent[]
-  tokens          VerificationToken[]
-  teachingGroups  Group[]              @relation("GroupTeacher")
+  staffCampuses     StaffCampus[]
+  teacherCampuses   TeacherCampus[]
+  student           Student?
+  parentLinks       ParentStudent[]
+  tokens            VerificationToken[]
+  teachingGroups    Group[]             @relation("GroupTeacher")
   reportedIncidents Incident[]
 }
 
@@ -115,11 +115,11 @@ model Invoice {
 }
 
 model ParentStudent {
-  id            String  @id @default(cuid())
-  parentUserId  String
-  studentId     String
-  parent        User    @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
-  student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id           String  @id @default(cuid())
+  parentUserId String
+  studentId    String
+  parent       User    @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  student      Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([parentUserId, studentId])
 }
@@ -160,8 +160,8 @@ model Enrollment {
   enrolledAt  DateTime  @default(now())
   completedAt DateTime?
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  group   Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student           Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
   attendanceRecords AttendanceRecord[]
 }
 
