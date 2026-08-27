@@ -138,10 +138,11 @@ model Group {
 }
 
 model Enrollment {
-  id         String   @id @default(cuid())
-  studentId  String
-  groupId    String
-  enrolledAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  studentId   String
+  groupId     String
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   group   Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
