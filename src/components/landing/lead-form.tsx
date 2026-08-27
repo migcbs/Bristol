@@ -41,43 +41,51 @@ export function LeadForm() {
 
   return (
     <Section id="contacto">
-      <Card className="mx-auto max-w-lg">
-        <h2 className="text-2xl font-bold text-primary">Solicita informes</h2>
-        <p className="mt-2 text-sm text-gray-600">
-          Déjanos tus datos y un asesor te contactará en menos de 24 horas.
-        </p>
-        {status === "sent" ? (
-          <p className="mt-6 text-sm font-medium text-primary">
-            ¡Gracias! Recibimos tu solicitud, pronto te contactaremos.
+      <div className="mx-auto grid max-w-5xl gap-10 rounded-3xl bg-primary p-2 md:grid-cols-2 md:p-3">
+        <div className="flex flex-col justify-center px-6 py-10 text-primary-foreground md:px-10">
+          <h2 className="font-display text-3xl font-bold md:text-4xl">
+            Da el primer paso hoy
+          </h2>
+          <p className="mt-4 max-w-sm text-white/75">
+            Déjanos tus datos y un asesor te contactará en menos de 24 horas
+            para ubicarte en el nivel y plantel correctos.
           </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <Input
-              placeholder="Nombre completo"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <Input
-              type="email"
-              placeholder="Correo electrónico"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <Input
-              type="tel"
-              placeholder="Teléfono (opcional)"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-            {error && <p className="text-sm text-accent">{error}</p>}
-            <Button type="submit" variant="accent" className="w-full" disabled={status === "sending"}>
-              {status === "sending" ? "Enviando..." : "Solicitar informes"}
-            </Button>
-          </form>
-        )}
-      </Card>
+        </div>
+
+        <Card className="m-2 md:m-3">
+          {status === "sent" ? (
+            <p className="text-sm font-medium text-primary">
+              ¡Gracias! Recibimos tu solicitud, pronto te contactaremos.
+            </p>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                placeholder="Nombre completo"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <Input
+                type="email"
+                placeholder="Correo electrónico"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Input
+                type="tel"
+                placeholder="Teléfono (opcional)"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              {error && <p className="text-sm text-accent">{error}</p>}
+              <Button type="submit" variant="accent" className="w-full" disabled={status === "sending"}>
+                {status === "sending" ? "Enviando..." : "Solicitar informes"}
+              </Button>
+            </form>
+          )}
+        </Card>
+      </div>
     </Section>
   );
 }
