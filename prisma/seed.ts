@@ -75,6 +75,17 @@ async function main() {
     },
   });
 
+  // A second group at the same campus so /admin/reinscripciones has a
+  // real destination group to re-enroll the demo student into.
+  await prisma.group.create({
+    data: {
+      name: "A2 Matutino",
+      campusId: campusNorte.id,
+      levelId: levels[1].id,
+      teacherId: teacherBoth.id,
+    },
+  });
+
   const studentUser = await prisma.user.create({
     data: {
       email: "alumno.demo@bristol-ingles.com",
