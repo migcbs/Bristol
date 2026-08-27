@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getVisibleGroupIds } from "@/lib/academic-access";
 import { prisma } from "@/lib/prisma";
 
 const MAX_TITLE_LENGTH = 200;
@@ -54,4 +55,35 @@ export async function POST(request: Request) {
   });
 
   return Response.json(material, { status: 201 });
+}
+
+export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return Response.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const groupId = searchParams.get("groupId");
+
+  const visibleGroupIds = await getVisibleGroupIds(session.user as { id: string; role: any });
+
+  if (groupId) {
+    if (!visibleGroupIds.includes(groupId)) {
+      return Response.json({ error: "No encontrado" }, { status: 404 });
+    }
+    const materials = await prisma.material.findMany({
+      where: { groupId },
+      orderBy: { createdAt: "desc" },
+      include: { uploadedBy: { select: { id: true, name: true } } },
+    });
+    return Response.json(materials);
+  }
+
+  const materials = await prisma.material.findMany({
+    where: { groupId: { in: visibleGroupIds } },
+    orderBy: { createdAt: "desc" },
+    include: { uploadedBy: { select: { id: true, name: true } } },
+  });
+  return Response.json(materials);
 }
