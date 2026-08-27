@@ -48,8 +48,8 @@ The seed script creates the following accounts, all sharing the password
 | Email | Role |
 | --- | --- |
 | `admin@bristol-ingles.com` | ADMIN |
-| `staff.norte@bristol-ingles.com` | STAFF (Bristol Norte) |
-| `staff.sur@bristol-ingles.com` | STAFF (Bristol Sur) |
+| `staff.coatepec@bristol-ingles.com` | STAFF (Coatepec) |
+| `staff.xalapa@bristol-ingles.com` | STAFF (Xalapa) |
 | `profesor.itinerante@bristol-ingles.com` | TEACHER (both campuses) |
 | `alumno.demo@bristol-ingles.com` | STUDENT |
 | `padre.demo@bristol-ingles.com` | PARENT |
