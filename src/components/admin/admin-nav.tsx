@@ -8,6 +8,7 @@ const MODULES = [
   { href: "/admin/admisiones", label: "Admisiones" },
   { href: "/admin/cobranzas", label: "Cobranzas" },
   { href: "/admin/reinscripciones", label: "Reinscripciones" },
+  { href: "/admin/incidencias", label: "Incidencias" },
 ];
 
 export function AdminNav() {
