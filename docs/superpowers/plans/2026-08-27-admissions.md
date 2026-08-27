@@ -428,6 +428,14 @@ export async function PATCH(
     return Response.json({ error: "No encontrado" }, { status: 404 });
   }
 
+  if (
+    body.campusId !== undefined &&
+    scope.type === "CAMPUS_LIST" &&
+    !scope.campusIds.includes(body.campusId)
+  ) {
+    return Response.json({ error: "Plantel fuera de tu alcance" }, { status: 400 });
+  }
+
   const data: { status?: LeadStatus; campusId?: string } = {};
   if (body.status !== undefined) data.status = body.status as LeadStatus;
   if (body.campusId !== undefined) data.campusId = body.campusId;
