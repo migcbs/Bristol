@@ -25,6 +25,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
+  return reviewGroupChangeRequest(session.user as { id: string; role: Role }, id, body.decision);
+}
+
+/**
+ * Core approve/reject logic for a group change request, shared between the
+ * PATCH route handler above and the Server Action on the solicitudes admin
+ * page. Assumes the caller has already authenticated the session and
+ * validated `decision` is "APROBADA" or "RECHAZADA".
+ */
+export async function reviewGroupChangeRequest(
+  actor: { id: string; role: Role },
+  id: string,
+  decision: "APROBADA" | "RECHAZADA"
+) {
+  const role = actor.role;
   const changeRequest = await prisma.groupChangeRequest.findUnique({
     where: { id },
     include: { student: true },
@@ -34,10 +49,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   if (role === "STAFF") {
-    const inScope = await assertCampusInScope(
-      session.user as { id: string; role: Role },
-      changeRequest.student.campusId
-    );
+    const inScope = await assertCampusInScope(actor, changeRequest.student.campusId);
     if (!inScope) {
       return Response.json({ error: "No encontrado" }, { status: 404 });
     }
@@ -51,9 +63,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return Response.json({ error: "Solicitud inválida: falta el grupo destino" }, { status: 400 });
   }
 
-  const reviewerId = (session.user as { id: string }).id;
+  const reviewerId = actor.id;
 
-  if (body.decision === "RECHAZADA") {
+  if (decision === "RECHAZADA") {
     const updated = await prisma.groupChangeRequest.update({
       where: { id },
       data: { status: "RECHAZADA", reviewedById: reviewerId, reviewedAt: new Date() },
