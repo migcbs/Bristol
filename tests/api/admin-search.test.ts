@@ -1,0 +1,74 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn() }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    student: { findMany: vi.fn() },
+    lead: { findMany: vi.fn() },
+    group: { findMany: vi.fn() },
+  },
+}));
+
+import { auth } from "@/lib/auth";
+import { getCampusScope } from "@/lib/campus-scope";
+import { prisma } from "@/lib/prisma";
+import { GET } from "@/app/api/admin/search/route";
+
+function getRequest(qs: string) {
+  return new Request(`http://localhost/api/admin/search${qs}`);
+}
+
+describe("GET /api/admin/search", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns 401 without a session", async () => {
+    (auth as any).mockResolvedValue(null);
+    const res = await GET(getRequest("?q=ana"));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a TEACHER", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    const res = await GET(getRequest("?q=ana"));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 400 for a query shorter than 2 characters", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    const res = await GET(getRequest("?q=a"));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns grouped results scoped by campus, limited to 5 per type", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "s1", role: "STAFF" } });
+    (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
+    (prisma.student.findMany as any).mockResolvedValue([]);
+    (prisma.lead.findMany as any).mockResolvedValue([]);
+    (prisma.group.findMany as any).mockResolvedValue([]);
+
+    const res = await GET(getRequest("?q=ana"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ students: [], leads: [], groups: [] });
+
+    expect(prisma.student.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 5,
+        where: expect.objectContaining({ campusId: { in: ["c1"] } }),
+      })
+    );
+    expect(prisma.lead.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 5,
+        where: expect.objectContaining({ campusId: { in: ["c1"] } }),
+      })
+    );
+    expect(prisma.group.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 5,
+        where: expect.objectContaining({ campusId: { in: ["c1"] } }),
+      })
+    );
+  });
+});
