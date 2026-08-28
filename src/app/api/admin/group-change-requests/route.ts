@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { assertCampusInScope } from "@/lib/campus-scope";
+import { assertCampusInScope, getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import type { GroupChangeRequestType, Role } from "@prisma/client";
 
@@ -77,4 +77,31 @@ export async function POST(request: Request) {
   });
 
   return Response.json(changeRequest, { status: 201 });
+}
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return Response.json({ error: "No autenticado" }, { status: 401 });
+  }
+  const role = (session.user as { role: Role }).role;
+  if (role !== "ADMIN" && role !== "STAFF") {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const scope = await getCampusScope(session.user as { id: string; role: Role });
+  const where =
+    scope.type === "ALL"
+      ? {}
+      : scope.type === "CAMPUS_LIST"
+        ? { student: { campusId: { in: scope.campusIds } } }
+        : { id: { in: [] } };
+
+  const requests = await prisma.groupChangeRequest.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: { student: { include: { user: { select: { id: true, name: true } } } }, currentGroup: true, requestedGroup: true },
+  });
+
+  return Response.json(requests);
 }
