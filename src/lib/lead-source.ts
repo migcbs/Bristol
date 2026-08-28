@@ -6,4 +6,6 @@ export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
   REFERIDO: "Referido",
   VISITA_PRESENCIAL: "Visita presencial",
   OTRO: "Otro",
+  PRESENCIAL_RECEPCION: "Presencial (Recepción)",
+  VOLANTEO: "Volanteo",
 };
