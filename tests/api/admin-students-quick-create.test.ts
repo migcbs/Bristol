@@ -71,4 +71,48 @@ describe("POST /api/admin/students/quick-create", () => {
     expect(res.status).toBe(201);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
+
+  it("retries on a matrícula P2002 collision and succeeds on the second attempt", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (hashPassword as any).mockResolvedValue("hashed");
+    (generateMatricula as any).mockResolvedValue("BRI-2026-00001");
+
+    const collision = Object.assign(new Error("Unique constraint failed"), {
+      code: "P2002",
+      meta: { target: ["matricula"] },
+    });
+
+    (prisma.$transaction as any)
+      .mockImplementationOnce(async () => {
+        throw collision;
+      })
+      .mockImplementationOnce(async (fn: any) =>
+        fn({
+          user: { create: vi.fn().mockResolvedValue({ id: "u1" }) },
+          student: { create: vi.fn().mockResolvedValue({ id: "st1", matricula: "BRI-2026-00002" }) },
+        })
+      );
+
+    const res = await POST(jsonRequest(VALID_BODY));
+    expect(res.status).toBe(201);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns 500 after exhausting retries on repeated P2002 collisions", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (hashPassword as any).mockResolvedValue("hashed");
+    (generateMatricula as any).mockResolvedValue("BRI-2026-00001");
+
+    const collision = Object.assign(new Error("Unique constraint failed"), {
+      code: "P2002",
+      meta: { target: ["matricula"] },
+    });
+
+    (prisma.$transaction as any).mockImplementation(async () => {
+      throw collision;
+    });
+
+    const res = await POST(jsonRequest(VALID_BODY));
+    expect(res.status).toBe(500);
+  });
 });
