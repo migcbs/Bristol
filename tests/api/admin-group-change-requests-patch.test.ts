@@ -7,8 +7,10 @@ vi.mock("@/lib/prisma", () => ({
     $transaction: vi.fn(),
   },
 }));
+vi.mock("@/lib/campus-scope", () => ({ assertCampusInScope: vi.fn() }));
 
 import { auth } from "@/lib/auth";
+import { assertCampusInScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import { PATCH } from "@/app/api/admin/group-change-requests/[id]/route";
 
@@ -44,6 +46,42 @@ describe("PATCH /api/admin/group-change-requests/[id]", () => {
     (prisma.groupChangeRequest.findUnique as any).mockResolvedValue(null);
     const res = await PATCH(jsonRequest({ decision: "APROBADA" }), makeParams("gcr1"));
     expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for a STAFF user whose scope doesn't include the student's campus", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "staff1", role: "STAFF" } });
+    (prisma.groupChangeRequest.findUnique as any).mockResolvedValue({
+      id: "gcr1",
+      status: "PENDIENTE",
+      type: "BAJA",
+      studentId: "st1",
+      currentGroupId: "g1",
+      student: { id: "st1", campusId: "campus-other" },
+    });
+    (assertCampusInScope as any).mockResolvedValue(false);
+
+    const res = await PATCH(jsonRequest({ decision: "APROBADA" }), makeParams("gcr1"));
+    expect(res.status).toBe(404);
+    expect(assertCampusInScope).toHaveBeenCalledWith({ id: "staff1", role: "STAFF" }, "campus-other");
+    expect(prisma.groupChangeRequest.update).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for a CAMBIO_GRUPO request with no requestedGroupId (inconsistent data)", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.groupChangeRequest.findUnique as any).mockResolvedValue({
+      id: "gcr1",
+      status: "PENDIENTE",
+      type: "CAMBIO_GRUPO",
+      studentId: "st1",
+      currentGroupId: "g1",
+      requestedGroupId: null,
+      student: { id: "st1", campusId: "campus-a" },
+    });
+
+    const res = await PATCH(jsonRequest({ decision: "APROBADA" }), makeParams("gcr1"));
+    expect(res.status).toBe(400);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("returns 400 when the request is not PENDIENTE", async () => {

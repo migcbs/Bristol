@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { assertCampusInScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
@@ -24,12 +25,30 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
-  const changeRequest = await prisma.groupChangeRequest.findUnique({ where: { id } });
+  const changeRequest = await prisma.groupChangeRequest.findUnique({
+    where: { id },
+    include: { student: true },
+  });
   if (!changeRequest) {
     return Response.json({ error: "No encontrado" }, { status: 404 });
   }
+
+  if (role === "STAFF") {
+    const inScope = await assertCampusInScope(
+      session.user as { id: string; role: Role },
+      changeRequest.student.campusId
+    );
+    if (!inScope) {
+      return Response.json({ error: "No encontrado" }, { status: 404 });
+    }
+  }
+
   if (changeRequest.status !== "PENDIENTE") {
     return Response.json({ error: "Esta solicitud ya fue revisada" }, { status: 400 });
+  }
+
+  if (changeRequest.type === "CAMBIO_GRUPO" && !changeRequest.requestedGroupId) {
+    return Response.json({ error: "Solicitud inválida: falta el grupo destino" }, { status: 400 });
   }
 
   const reviewerId = (session.user as { id: string }).id;
