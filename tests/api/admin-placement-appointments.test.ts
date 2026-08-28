@@ -71,6 +71,16 @@ describe("POST /api/admin/placement-appointments", () => {
     expect(prisma.placementAppointment.create).not.toHaveBeenCalled();
   });
 
+  it("returns 403 when STAFF attempts to create an appointment outside their campus scope", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "s1", role: "STAFF" } });
+    (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
+    (prisma.lead.findUnique as any).mockResolvedValue({ id: "l1" });
+
+    const res = await POST(jsonRequest({ ...VALID_BODY, campusId: "c2" }));
+    expect(res.status).toBe(403);
+    expect(prisma.placementAppointment.create).not.toHaveBeenCalled();
+  });
+
   it("creates the appointment on success", async () => {
     (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
     (prisma.lead.findUnique as any).mockResolvedValue({ id: "l1" });
