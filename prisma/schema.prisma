@@ -71,6 +71,10 @@ model User {
   createdGrades        Grade[]
   leadsAsAdvisor       Lead[]              @relation("LeadAdvisor")
   receptionLogEntries  ReceptionLogEntry[]
+
+  createdBlockEvaluations BlockEvaluation[]
+  requestedGroupChanges   GroupChangeRequest[] @relation("RequestedBy")
+  reviewedGroupChanges    GroupChangeRequest[] @relation("ReviewedBy")
 }
 
 model StaffCampus {
@@ -126,6 +130,8 @@ model Student {
   enrollments Enrollment[]
   invoices    Invoice[]
   incidents   Incident[]
+
+  groupChangeRequests GroupChangeRequest[]
 }
 
 enum InvoiceStatus {
@@ -136,15 +142,18 @@ enum InvoiceStatus {
 }
 
 model Invoice {
-  id                      String        @id @default(cuid())
-  studentId               String
-  description             String
-  amountCents             Int
-  dueDate                 DateTime
-  status                  InvoiceStatus @default(PENDING)
-  stripeCheckoutSessionId String?
-  paidAt                  DateTime?
-  createdAt               DateTime      @default(now())
+  id                        String        @id @default(cuid())
+  studentId                 String
+  description               String
+  amountCents               Int
+  dueDate                   DateTime
+  status                    InvoiceStatus @default(PENDING)
+  stripeCheckoutSessionId   String?
+  paidAt                    DateTime?
+  createdAt                 DateTime      @default(now())
+  baseCents                 Int?
+  scholarshipPercent        Decimal?      @db.Decimal(5, 2)
+  earlyPaymentDiscountCents Int?
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
@@ -168,12 +177,13 @@ model Level {
 }
 
 model Group {
-  id        String   @id @default(cuid())
-  campusId  String
-  levelId   String
-  teacherId String
-  name      String
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  campusId   String
+  levelId    String
+  teacherId  String
+  name       String
+  createdAt  DateTime @default(now())
+  cupoMaximo Int      @default(20)
 
   campus        Campus         @relation(fields: [campusId], references: [id])
   level         Level          @relation(fields: [levelId], references: [id])
@@ -182,6 +192,9 @@ model Group {
   incidents     Incident[]
   scheduleSlots ScheduleSlot[]
   materials     Material[]
+
+  changeRequestsFrom GroupChangeRequest[] @relation("CurrentGroup")
+  changeRequestsTo   GroupChangeRequest[] @relation("RequestedGroup")
 }
 
 // NOTE: the database also has a partial unique index enforcing "at most one
@@ -201,6 +214,7 @@ model Enrollment {
   group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
   attendanceRecords AttendanceRecord[]
   grades            Grade[]
+  blockEvaluations  BlockEvaluation[]
 }
 
 model VerificationToken {
@@ -363,4 +377,54 @@ model Grade {
 
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   createdBy  User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model BlockEvaluation {
+  id             String   @id @default(cuid())
+  enrollmentId   String
+  bloqueNumero   Int
+  notaListening  Decimal  @db.Decimal(4, 2)
+  notaSpeaking   Decimal  @db.Decimal(4, 2)
+  notaReading    Decimal  @db.Decimal(4, 2)
+  notaWriting    Decimal  @db.Decimal(4, 2)
+  notaGrammar    Decimal  @db.Decimal(4, 2)
+  promedioBloque Decimal  @db.Decimal(4, 2)
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, bloqueNumero])
+}
+
+enum GroupChangeRequestType {
+  BAJA
+  CAMBIO_GRUPO
+}
+
+enum GroupChangeRequestStatus {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+model GroupChangeRequest {
+  id               String                   @id @default(cuid())
+  type             GroupChangeRequestType
+  studentId        String
+  currentGroupId   String
+  requestedGroupId String?
+  reason           String
+  status           GroupChangeRequestStatus @default(PENDIENTE)
+  requestedById    String
+  reviewedById     String?
+  reviewedAt       DateTime?
+  createdAt        DateTime                 @default(now())
+
+  student        Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  currentGroup   Group   @relation("CurrentGroup", fields: [currentGroupId], references: [id])
+  requestedGroup Group?  @relation("RequestedGroup", fields: [requestedGroupId], references: [id])
+  requestedBy    User    @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy     User?   @relation("ReviewedBy", fields: [reviewedById], references: [id])
 }
