@@ -7,6 +7,7 @@ vi.mock("@/lib/password", () => ({ hashPassword: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     $transaction: vi.fn(),
+    user: { findUnique: vi.fn() },
   },
 }));
 
@@ -56,8 +57,32 @@ describe("POST /api/admin/students/quick-create", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when name exceeds 120 characters", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    const res = await POST(jsonRequest({ ...VALID_BODY, name: "a".repeat(121) }));
+    expect(res.status).toBe(400);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when email exceeds 254 characters", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    const longEmail = `${"a".repeat(250)}@example.com`;
+    const res = await POST(jsonRequest({ ...VALID_BODY, email: longEmail }));
+    expect(res.status).toBe(400);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when a user with the given email already exists", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "existing" });
+    const res = await POST(jsonRequest(VALID_BODY));
+    expect(res.status).toBe(409);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("creates User+Student with a generated matrícula in one transaction on success", async () => {
     (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.user.findUnique as any).mockResolvedValue(null);
     (hashPassword as any).mockResolvedValue("hashed");
     (generateMatricula as any).mockResolvedValue("BRI-2026-00001");
     (prisma.$transaction as any).mockImplementation(async (fn: any) =>
@@ -74,6 +99,7 @@ describe("POST /api/admin/students/quick-create", () => {
 
   it("retries on a matrícula P2002 collision and succeeds on the second attempt", async () => {
     (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.user.findUnique as any).mockResolvedValue(null);
     (hashPassword as any).mockResolvedValue("hashed");
     (generateMatricula as any).mockResolvedValue("BRI-2026-00001");
 
@@ -100,6 +126,7 @@ describe("POST /api/admin/students/quick-create", () => {
 
   it("returns 500 after exhausting retries on repeated P2002 collisions", async () => {
     (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.user.findUnique as any).mockResolvedValue(null);
     (hashPassword as any).mockResolvedValue("hashed");
     (generateMatricula as any).mockResolvedValue("BRI-2026-00001");
 

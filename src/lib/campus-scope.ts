@@ -62,6 +62,21 @@ export function incidentScopeWhere(scope: CampusScope): Prisma.IncidentWhereInpu
   }
 }
 
+/**
+ * Checks whether `campusId` is within the given user's campus scope.
+ * ADMIN (scope "ALL") is always in scope; STAFF/TEACHER ("CAMPUS_LIST") are
+ * in scope only if `campusId` is one of their assigned campuses. Any other
+ * scope variant fails closed. Use this before any STAFF-gated write that
+ * targets a specific campus.
+ */
+export async function assertCampusInScope(
+  user: { id: string; role: Role },
+  campusId: string
+): Promise<boolean> {
+  const scope = await getCampusScope(user);
+  return scope.type === "ALL" || (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(campusId));
+}
+
 export async function getCampusScope(user: { id: string; role: Role }): Promise<CampusScope> {
   switch (user.role) {
     case "ADMIN":

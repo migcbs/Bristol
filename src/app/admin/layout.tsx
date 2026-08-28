@@ -1,13 +1,24 @@
 import { auth } from "@/lib/auth";
 import { signOut } from "@/lib/auth";
+import { getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { CommandPalette } from "@/components/admin/command-palette";
 import { QuickCreateDrawer } from "@/components/admin/quick-create-drawer";
+import type { Role } from "@prisma/client";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  const campuses = await prisma.campus.findMany({ orderBy: { name: "asc" } });
+
+  const scope = session?.user
+    ? await getCampusScope(session.user as { id: string; role: Role })
+    : undefined;
+  const campuses =
+    !scope || scope.type === "ALL"
+      ? await prisma.campus.findMany({ orderBy: { name: "asc" } })
+      : scope.type === "CAMPUS_LIST"
+        ? await prisma.campus.findMany({ where: { id: { in: scope.campusIds } }, orderBy: { name: "asc" } })
+        : [];
 
   return (
     <div className="min-h-screen bg-surface">

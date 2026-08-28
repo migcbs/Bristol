@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { assertCampusInScope, getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import type { ReceptionLogType, Role } from "@prisma/client";
 
@@ -65,6 +65,13 @@ export default async function BitacoraPage({
       redirect("/admin/recepcion/bitacora?error=Datos+inv%C3%A1lidos");
     }
 
+    if (role === "STAFF") {
+      const inScope = await assertCampusInScope(session.user as { id: string; role: Role }, campusId);
+      if (!inScope) {
+        redirect("/admin/recepcion/bitacora?error=No+autorizado");
+      }
+    }
+
     await prisma.receptionLogEntry.create({
       data: {
         campusId,
@@ -115,7 +122,7 @@ export default async function BitacoraPage({
 
       {params.error && (
         <p className="mt-4 rounded-md border border-accent bg-accent/10 px-3 py-2 text-sm text-accent-dark">
-          {decodeURIComponent(params.error)}
+          {params.error}
         </p>
       )}
 

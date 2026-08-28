@@ -1,11 +1,19 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { getCampusScope, leadScopeWhere } from "@/lib/campus-scope";
+import { assertCampusInScope, getCampusScope, leadScopeWhere } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
 const OVERLAP_WINDOW_MS = 30 * 60 * 1000;
+
+function isLeadUniqueCollision(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const err = error as { code?: unknown; meta?: { target?: unknown } };
+  if (err.code !== "P2002") return false;
+  const target = err.meta?.target;
+  return !target || JSON.stringify(target).includes("leadId");
+}
 
 export default async function AgendaPage({
   searchParams,
@@ -71,9 +79,8 @@ export default async function AgendaPage({
       redirect("/admin/recepcion/agenda?error=Datos+inv%C3%A1lidos");
     }
 
-    const scope = await getCampusScope(session.user as { id: string; role: Role });
     if (role === "STAFF") {
-      const inScope = scope.type === "ALL" || (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(campusId));
+      const inScope = await assertCampusInScope(session.user as { id: string; role: Role }, campusId);
       if (!inScope) {
         redirect("/admin/recepcion/agenda?error=No+autorizado");
       }
@@ -89,6 +96,13 @@ export default async function AgendaPage({
       redirect("/admin/recepcion/agenda?error=Lead+no+encontrado");
     }
 
+    if (role === "STAFF" && lead.campusId) {
+      const leadInScope = await assertCampusInScope(session.user as { id: string; role: Role }, lead.campusId);
+      if (!leadInScope) {
+        redirect("/admin/recepcion/agenda?error=No+autorizado");
+      }
+    }
+
     const windowStart = new Date(scheduledFor.getTime() - OVERLAP_WINDOW_MS);
     const windowEnd = new Date(scheduledFor.getTime() + OVERLAP_WINDOW_MS);
     const overlapping = await prisma.placementAppointment.findMany({
@@ -98,9 +112,16 @@ export default async function AgendaPage({
       redirect("/admin/recepcion/agenda?error=Ya+existe+una+cita+en+ese+horario");
     }
 
-    await prisma.placementAppointment.create({
-      data: { leadId, campusId, scheduledFor },
-    });
+    try {
+      await prisma.placementAppointment.create({
+        data: { leadId, campusId, scheduledFor },
+      });
+    } catch (error) {
+      if (isLeadUniqueCollision(error)) {
+        redirect("/admin/recepcion/agenda?error=Este+lead+ya+tiene+una+cita+de+ubicaci%C3%B3n+agendada");
+      }
+      throw error;
+    }
 
     revalidatePath("/admin/recepcion/agenda");
     redirect("/admin/recepcion/agenda");
@@ -117,7 +138,7 @@ export default async function AgendaPage({
 
       {params.error && (
         <p className="mt-4 rounded-md border border-accent bg-accent/10 px-3 py-2 text-sm text-accent-dark">
-          {decodeURIComponent(params.error)}
+          {params.error}
         </p>
       )}
 
