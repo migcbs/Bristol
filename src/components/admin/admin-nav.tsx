@@ -11,6 +11,9 @@ const MODULES = [
   { href: "/admin/incidencias", label: "Incidencias" },
   { href: "/admin/comunicaciones", label: "Comunicaciones" },
   { href: "/admin/mercadotecnia", label: "Mercadotecnia" },
+  { href: "/admin/recepcion/lista-espera", label: "Lista de Espera" },
+  { href: "/admin/recepcion/agenda", label: "Agenda" },
+  { href: "/admin/recepcion/bitacora", label: "Bitácora" },
 ];
 
 export function AdminNav() {
