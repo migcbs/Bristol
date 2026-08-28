@@ -1,9 +1,18 @@
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { assertCampusInScope, getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
 const OVERLAP_WINDOW_MS = 30 * 60 * 1000; // 30-minute exams; a new one within this window of an existing one at the same campus is a conflict
+const MAX_NOTES_LENGTH = 2000;
+
+function isLeadUniqueCollision(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const err = error as { code?: unknown; meta?: { target?: unknown } };
+  if (err.code !== "P2002") return false;
+  const target = err.meta?.target;
+  return !target || JSON.stringify(target).includes("leadId");
+}
 
 export async function GET() {
   const session = await auth();
@@ -49,9 +58,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
+  const notes = body.notes?.trim();
+  if (notes && notes.length > MAX_NOTES_LENGTH) {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+
   if (role === "STAFF") {
-    const scope = await getCampusScope(session.user as { id: string; role: Role });
-    const inScope = scope.type === "ALL" || (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(body.campusId));
+    const inScope = await assertCampusInScope(session.user as { id: string; role: Role }, body.campusId);
     if (!inScope) {
       return Response.json({ error: "No autorizado" }, { status: 403 });
     }
@@ -67,6 +80,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "Lead no encontrado" }, { status: 404 });
   }
 
+  if (role === "STAFF" && lead.campusId) {
+    const leadInScope = await assertCampusInScope(session.user as { id: string; role: Role }, lead.campusId);
+    if (!leadInScope) {
+      return Response.json({ error: "No autorizado" }, { status: 403 });
+    }
+  }
+
   const windowStart = new Date(scheduledFor.getTime() - OVERLAP_WINDOW_MS);
   const windowEnd = new Date(scheduledFor.getTime() + OVERLAP_WINDOW_MS);
   const overlapping = await prisma.placementAppointment.findMany({
@@ -76,14 +96,21 @@ export async function POST(request: Request) {
     return Response.json({ error: "Ya existe una cita en ese horario para este plantel" }, { status: 400 });
   }
 
-  const appointment = await prisma.placementAppointment.create({
-    data: {
-      leadId: body.leadId,
-      campusId: body.campusId,
-      scheduledFor,
-      notes: body.notes?.trim() || null,
-    },
-  });
+  try {
+    const appointment = await prisma.placementAppointment.create({
+      data: {
+        leadId: body.leadId,
+        campusId: body.campusId,
+        scheduledFor,
+        notes: notes || null,
+      },
+    });
 
-  return Response.json(appointment, { status: 201 });
+    return Response.json(appointment, { status: 201 });
+  } catch (error) {
+    if (isLeadUniqueCollision(error)) {
+      return Response.json({ error: "Este lead ya tiene una cita de ubicación agendada" }, { status: 409 });
+    }
+    throw error;
+  }
 }

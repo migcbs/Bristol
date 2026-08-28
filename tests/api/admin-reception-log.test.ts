@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn() }));
+vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn(), assertCampusInScope: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     receptionLogEntry: { findMany: vi.fn(), create: vi.fn() },
@@ -11,7 +11,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { assertCampusInScope, getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import { GET, POST } from "@/app/api/admin/reception-log/route";
 import { GET as GET_REPORT } from "@/app/api/admin/reception-log/monthly-report/route";
@@ -36,9 +36,26 @@ describe("POST /api/admin/reception-log", () => {
 
   it("creates a log entry on success", async () => {
     (auth as any).mockResolvedValue({ user: { id: "s1", role: "STAFF" } });
+    (assertCampusInScope as any).mockResolvedValue(true);
     (prisma.receptionLogEntry.create as any).mockResolvedValue({ id: "rl1" });
     const res = await POST(jsonRequest({ campusId: "c1", type: "LLAMADA", note: "Llamó un padre de familia" }));
     expect(res.status).toBe(201);
+  });
+
+  it("returns 403 when STAFF attempts to log an entry outside their campus scope", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "s1", role: "STAFF" } });
+    (assertCampusInScope as any).mockResolvedValue(false);
+    const res = await POST(jsonRequest({ campusId: "c2", type: "LLAMADA", note: "Llamó un padre de familia" }));
+    expect(res.status).toBe(403);
+    expect(prisma.receptionLogEntry.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a log entry for ADMIN without a scope check", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.receptionLogEntry.create as any).mockResolvedValue({ id: "rl2" });
+    const res = await POST(jsonRequest({ campusId: "c9", type: "NOTA", note: "Nota administrativa" }));
+    expect(res.status).toBe(201);
+    expect(assertCampusInScope).not.toHaveBeenCalled();
   });
 });
 

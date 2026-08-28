@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { assertCampusInScope, getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import type { ReceptionLogType, Role } from "@prisma/client";
 
@@ -48,6 +48,13 @@ export async function POST(request: Request) {
   const note = body.note?.trim();
   if (!body.campusId || !body.type || !VALID_TYPES.includes(body.type as ReceptionLogType) || !note || note.length > MAX_NOTE_LENGTH) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+
+  if (role === "STAFF") {
+    const inScope = await assertCampusInScope(session.user as { id: string; role: Role }, body.campusId);
+    if (!inScope) {
+      return Response.json({ error: "No autorizado" }, { status: 403 });
+    }
   }
 
   const entry = await prisma.receptionLogEntry.create({

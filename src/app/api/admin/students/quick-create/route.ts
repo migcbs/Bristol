@@ -40,12 +40,21 @@ export async function POST(request: Request) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
+  if (name.length > 120 || email.length > 254) {
+    return Response.json({ error: "Uno o más campos exceden la longitud permitida" }, { status: 400 });
+  }
+
   if (role === "STAFF") {
     const scope = await getCampusScope(session.user as { id: string; role: Role });
     const inScope = scope.type === "ALL" || (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(body.campusId));
     if (!inScope) {
       return Response.json({ error: "No autorizado" }, { status: 403 });
     }
+  }
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) {
+    return Response.json({ error: "Ya existe una cuenta con este correo electrónico" }, { status: 409 });
   }
 
   const temporaryPassword = crypto.randomBytes(12).toString("base64url");

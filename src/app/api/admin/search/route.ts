@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { getCampusScope } from "@/lib/campus-scope";
+import { getCampusScope, leadScopeWhere } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
@@ -37,11 +37,15 @@ export async function GET(request: Request) {
     }),
     prisma.lead.findMany({
       where: {
-        ...campusWhere,
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { email: { contains: q, mode: "insensitive" } },
-          { phone: { contains: q, mode: "insensitive" } },
+        AND: [
+          leadScopeWhere(scope),
+          {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { email: { contains: q, mode: "insensitive" } },
+              { phone: { contains: q, mode: "insensitive" } },
+            ],
+          },
         ],
       },
       take: 5,
