@@ -39,12 +39,14 @@ model Campus {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  staff         StaffCampus[]
-  teachers      TeacherCampus[]
-  students      Student[]
-  groups        Group[]
-  leads         Lead[]
-  announcements Announcement[]
+  staff                 StaffCampus[]
+  teachers              TeacherCampus[]
+  students              Student[]
+  groups                Group[]
+  leads                 Lead[]
+  announcements         Announcement[]
+  placementAppointments PlacementAppointment[]
+  receptionLogEntries   ReceptionLogEntry[]
 }
 
 model User {
@@ -67,6 +69,8 @@ model User {
   createdAnnouncements Announcement[]
   uploadedMaterials    Material[]
   createdGrades        Grade[]
+  leadsAsAdvisor       Lead[]              @relation("LeadAdvisor")
+  receptionLogEntries  ReceptionLogEntry[]
 }
 
 model StaffCampus {
@@ -89,13 +93,34 @@ model TeacherCampus {
   @@unique([userId, campusId])
 }
 
+enum StudentStatus {
+  ACTIVO
+  BAJA
+  GRADUADO
+}
+
 model Student {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  campusId  String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campus    Campus   @relation(fields: [campusId], references: [id])
+  id                 String        @id @default(cuid())
+  userId             String        @unique
+  campusId           String
+  createdAt          DateTime      @default(now())
+  matricula          String        @unique
+  curp               String?
+  fechaNacimiento    DateTime?
+  entregaActa        Boolean       @default(false)
+  entregaCurp        Boolean       @default(false)
+  entregaComprobante Boolean       @default(false)
+  telefonoFijo       String?
+  telefonoMovil      String?
+  emailContacto      String?
+  rfc                String?
+  razonSocial        String?
+  regimenFiscal      String?
+  codigoPostalFiscal String?
+  usoCfdi            String?
+  estatusAlumno      StudentStatus @default(ACTIVO)
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campus             Campus        @relation(fields: [campusId], references: [id])
 
   parentLinks ParentStudent[]
   enrollments Enrollment[]
@@ -192,6 +217,7 @@ model VerificationToken {
 enum LeadStatus {
   NEW
   CONTACTED
+  PLACEMENT_SCHEDULED
   ENROLLED
   LOST
 }
@@ -202,20 +228,64 @@ enum LeadSource {
   REFERIDO
   VISITA_PRESENCIAL
   OTRO
+  PRESENCIAL_RECEPCION
+  VOLANTEO
+}
+
+enum InterestType {
+  CURSO_REGULAR
+  TALLER_CONVERSACION
+  CERTIFICACION
 }
 
 model Lead {
-  id        String     @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  message   String?
-  campusId  String?
-  status    LeadStatus @default(NEW)
-  source    LeadSource @default(OTRO)
-  createdAt DateTime   @default(now())
+  id               String        @id @default(cuid())
+  name             String
+  email            String
+  phone            String?
+  message          String?
+  campusId         String?
+  status           LeadStatus    @default(NEW)
+  source           LeadSource    @default(OTRO)
+  createdAt        DateTime      @default(now())
+  dateOfBirth      DateTime?
+  interestType     InterestType?
+  notasBitacora    String?
+  asesorAsignadoId String?
 
-  campus Campus? @relation(fields: [campusId], references: [id])
+  campus               Campus?               @relation(fields: [campusId], references: [id])
+  asesorAsignado       User?                 @relation("LeadAdvisor", fields: [asesorAsignadoId], references: [id])
+  placementAppointment PlacementAppointment?
+}
+
+model PlacementAppointment {
+  id           String   @id @default(cuid())
+  leadId       String   @unique
+  scheduledFor DateTime
+  campusId     String
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campus Campus @relation(fields: [campusId], references: [id])
+}
+
+enum ReceptionLogType {
+  LLAMADA
+  INCIDENCIA
+  NOTA
+}
+
+model ReceptionLogEntry {
+  id          String           @id @default(cuid())
+  campusId    String
+  createdById String
+  type        ReceptionLogType
+  note        String
+  createdAt   DateTime         @default(now())
+
+  campus    Campus @relation(fields: [campusId], references: [id])
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
 }
 
 model AttendanceRecord {

@@ -93,7 +93,9 @@ async function main() {
       role: "STUDENT",
       passwordHash,
       emailVerifiedAt: new Date(),
-      student: { create: { campusId: campusCoatepec.id } },
+      student: {
+        create: { campusId: campusCoatepec.id, matricula: "BRI-2026-00001" },
+      },
     },
     include: { student: true },
   });
