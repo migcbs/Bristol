@@ -49,6 +49,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
+  if (role === "STAFF") {
+    const scope = await getCampusScope(session.user as { id: string; role: Role });
+    const inScope = scope.type === "ALL" || (scope.type === "CAMPUS_LIST" && scope.campusIds.includes(body.campusId));
+    if (!inScope) {
+      return Response.json({ error: "No autorizado" }, { status: 403 });
+    }
+  }
+
   const scheduledFor = new Date(body.scheduledFor);
   if (Number.isNaN(scheduledFor.getTime())) {
     return Response.json({ error: "Fecha inválida" }, { status: 400 });
