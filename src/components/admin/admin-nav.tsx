@@ -14,6 +14,8 @@ const MODULES = [
   { href: "/admin/recepcion/lista-espera", label: "Lista de Espera" },
   { href: "/admin/recepcion/agenda", label: "Agenda" },
   { href: "/admin/recepcion/bitacora", label: "Bitácora" },
+  { href: "/admin/recepcion/grupos-disponibilidad", label: "Disponibilidad" },
+  { href: "/admin/control-escolar/solicitudes", label: "Solicitudes" },
 ];
 
 export function AdminNav() {
