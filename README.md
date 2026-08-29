@@ -45,14 +45,21 @@ nvm use
 The seed script creates the following accounts, all sharing the password
 `Bristol123!`:
 
-| Email | Role |
-| --- | --- |
-| `admin@bristol-ingles.com` | ADMIN |
-| `staff.coatepec@bristol-ingles.com` | STAFF (Coatepec) |
-| `staff.xalapa@bristol-ingles.com` | STAFF (Xalapa) |
-| `profesor.itinerante@bristol-ingles.com` | TEACHER (both campuses) |
-| `alumno.demo@bristol-ingles.com` | STUDENT |
-| `padre.demo@bristol-ingles.com` | PARENT |
+| Email | Role | Puesto | Campus |
+| --- | --- | --- | --- |
+| `admin@bristol-ingles.com` | ADMIN | — | both |
+| `staff.coatepec@bristol-ingles.com` | STAFF | — | Coatepec |
+| `staff.xalapa@bristol-ingles.com` | STAFF | — | Xalapa |
+| `recepcion.coatepec@bristol-ingles.com` | STAFF | RECEPCION | Coatepec |
+| `caja.xalapa@bristol-ingles.com` | STAFF | CAJA | Xalapa |
+| `controlescolar.coatepec@bristol-ingles.com` | STAFF | CONTROL_ESCOLAR | Coatepec |
+| `comercial@bristol-ingles.com` | STAFF | COMERCIAL | both |
+| `calidadycontrol@bristol-ingles.com` | STAFF | CALIDAD_CONTROL | both |
+| `direccion.xalapa@bristol-ingles.com` | STAFF | DIRECCION_CAMPUS | Xalapa |
+| `profesor.itinerante@bristol-ingles.com` | TEACHER | — | both |
+| `alumno.demo@bristol-ingles.com` | STUDENT | — | minor, linked parent |
+| `alumno.adulto.demo@bristol-ingles.com` | STUDENT | — | adult, pays for themselves |
+| `padre.demo@bristol-ingles.com` | PARENT | — | linked to `alumno.demo@bristol-ingles.com` |
 
 ### Other scripts
 
