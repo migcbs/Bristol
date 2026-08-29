@@ -32,6 +32,15 @@ enum AnnouncementAudience {
   ROLE
 }
 
+enum StaffPosition {
+  RECEPCION
+  CAJA
+  CONTROL_ESCOLAR
+  COMERCIAL
+  CALIDAD_CONTROL
+  DIRECCION_CAMPUS
+}
+
 model Campus {
   id        String   @id @default(cuid())
   name      String
@@ -50,14 +59,15 @@ model Campus {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
+  id              String         @id @default(cuid())
+  email           String         @unique
   passwordHash    String
   name            String
   role            Role
   emailVerifiedAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  staffPosition   StaffPosition?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   staffCampuses        StaffCampus[]
   teacherCampuses      TeacherCampus[]
