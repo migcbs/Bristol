@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope } from "@/lib/campus-scope";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
@@ -14,6 +15,11 @@ export async function POST(request: Request) {
   }
   const role = (session.user as { role: string }).role;
   if (!assertAdminOrStaff(role)) {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const access = await hasModuleAccess(session.user as { id: string; role: any }, "cobranzas");
+  if (access === "none") {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
@@ -76,6 +82,11 @@ export async function GET(request: Request) {
   }
   const role = (session.user as { role: string }).role;
   if (!assertAdminOrStaff(role)) {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const access = await hasModuleAccess(session.user as { id: string; role: any }, "cobranzas");
+  if (access === "none") {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
