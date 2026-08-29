@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { computeAgeBracket } from "@/lib/age-bracket";
 import { getVisibleStudentIds } from "@/lib/invoice-scope";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -17,6 +18,17 @@ export default async function PortalCobranzasPage({
 
   const { paid } = await searchParams;
   const studentIds = await getVisibleStudentIds(session.user as { id: string; role: any });
+
+  const role = (session.user as { role: string }).role;
+  let canPay = true;
+  if (role === "STUDENT") {
+    const student = await prisma.student.findUnique({
+      where: { userId: session.user.id },
+    });
+    canPay = student?.fechaNacimiento
+      ? computeAgeBracket(student.fechaNacimiento) === "ADULTO"
+      : false;
+  }
 
   const invoices = studentIds.length
     ? await prisma.invoice.findMany({
@@ -46,9 +58,12 @@ export default async function PortalCobranzasPage({
             </div>
             <div className="flex items-center gap-3">
               <Badge tone="primary">{INVOICE_STATUS_LABELS[invoice.status]}</Badge>
-              {(invoice.status === "PENDING" || invoice.status === "OVERDUE") && (
-                <PayButton invoiceId={invoice.id} />
-              )}
+              {(invoice.status === "PENDING" || invoice.status === "OVERDUE") &&
+                (canPay ? (
+                  <PayButton invoiceId={invoice.id} />
+                ) : (
+                  <p className="text-xs text-muted">El pago debe realizarlo tu padre o tutor.</p>
+                ))}
             </div>
           </Card>
         ))}

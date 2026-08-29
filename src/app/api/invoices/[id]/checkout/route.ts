@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { computeAgeBracket } from "@/lib/age-bracket";
 import { getVisibleStudentIds } from "@/lib/invoice-scope";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
@@ -21,6 +22,19 @@ export async function POST(
   const studentIds = await getVisibleStudentIds(session.user as { id: string; role: any });
   if (!studentIds.includes(invoice.studentId)) {
     return Response.json({ error: "No encontrado" }, { status: 404 });
+  }
+
+  if ((session.user as { role: string }).role === "STUDENT") {
+    const student = await prisma.student.findUnique({ where: { id: invoice.studentId } });
+    const isAdult = student?.fechaNacimiento
+      ? computeAgeBracket(student.fechaNacimiento) === "ADULTO"
+      : false; // missing birthdate = treated as minor, per the confirmed decision
+    if (!isAdult) {
+      return Response.json(
+        { error: "Un alumno menor de edad no puede pagar directamente; el pago debe hacerlo su padre o tutor." },
+        { status: 403 }
+      );
+    }
   }
 
   if (invoice.status === "PAID" || invoice.status === "CANCELED") {

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/invoice-scope", () => ({ getVisibleStudentIds: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
-  prisma: { invoice: { findUnique: vi.fn(), update: vi.fn() } },
+  prisma: { invoice: { findUnique: vi.fn(), update: vi.fn() }, student: { findUnique: vi.fn() } },
 }));
 vi.mock("@/lib/stripe", () => ({
   stripe: { checkout: { sessions: { create: vi.fn() } } },
@@ -40,6 +40,7 @@ describe("POST /api/invoices/[id]/checkout", () => {
     (auth as any).mockResolvedValue({ user: { id: "u1", role: "STUDENT" } });
     (getVisibleStudentIds as any).mockResolvedValue(["s1"]);
     (prisma.invoice.findUnique as any).mockResolvedValue({ id: "i1", studentId: "s1", status: "PAID" });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "s1", fechaNacimiento: new Date("1990-01-01") });
 
     const res = await POST(new Request("http://localhost"), ctx);
     expect(res.status).toBe(400);
@@ -50,6 +51,7 @@ describe("POST /api/invoices/[id]/checkout", () => {
     (auth as any).mockResolvedValue({ user: { id: "u1", role: "STUDENT" } });
     (getVisibleStudentIds as any).mockResolvedValue(["s1"]);
     (prisma.invoice.findUnique as any).mockResolvedValue({ id: "i1", studentId: "s1", status: "CANCELED" });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "s1", fechaNacimiento: new Date("1990-01-01") });
 
     const res = await POST(new Request("http://localhost"), ctx);
     expect(res.status).toBe(400);
@@ -66,6 +68,7 @@ describe("POST /api/invoices/[id]/checkout", () => {
       description: "Colegiatura",
       amountCents: 150000,
     });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "s1", fechaNacimiento: new Date("1990-01-01") });
     (stripe.checkout.sessions.create as any).mockResolvedValue({
       id: "cs_123",
       url: "https://checkout.stripe.com/cs_123",
@@ -87,6 +90,7 @@ describe("POST /api/invoices/[id]/checkout", () => {
       description: "Colegiatura",
       amountCents: 150000,
     });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "s1", fechaNacimiento: new Date("1990-01-01") });
     (stripe.checkout.sessions.create as any).mockRejectedValue(new Error("stripe down"));
 
     const res = await POST(new Request("http://localhost"), ctx);
@@ -106,6 +110,7 @@ describe("POST /api/invoices/[id]/checkout", () => {
       description: "Colegiatura",
       amountCents: 150000,
     });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "s1", fechaNacimiento: new Date("1990-01-01") });
     (stripe.checkout.sessions.create as any).mockResolvedValue({
       id: "cs_123",
       url: "https://checkout.stripe.com/cs_123",
