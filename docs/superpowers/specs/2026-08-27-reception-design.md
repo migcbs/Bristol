@@ -251,6 +251,12 @@ Al aprobar un `GroupChangeRequest`: si `type = BAJA`, marca `completedAt` en la 
 
 ## 4c — Comercial y Comunicación Interna
 
+### Nota de alcance (actualizada tras 4a/4b)
+
+`Lead.asesorAsignadoId`, la relación `"LeadAdvisor"`, y los valores nuevos de `LeadSource`/`LeadStatus` ya se agregaron en la Spec 4a (se incluyeron en la misma migración que el resto de los campos de `Lead`, para no tocar ese modelo en dos migraciones separadas). Por lo tanto, **4c no vuelve a extender el esquema de `Lead`** — solo agrega el endpoint y la UI para asignar el asesor, reutilizando el `PATCH /api/admin/leads/[id]` que ya existe (Spec 2f, Mercadotecnia) en vez de crear una ruta `/assign` paralela, mismo criterio de "extender, no duplicar" del resto del proyecto. De paso, esa ruta tiene un bug pre-existente descubierto al revisar su código para esta spec: su lista `VALID_STATUSES` nunca se actualizó cuando 4a agregó `PLACEMENT_SCHEDULED` a `LeadStatus`, así que ese estatus no se puede asignar todavía vía esa ruta — se corrige como parte de 4c.
+
+También se acota el evento de notificación de pago (mencionado como ejemplo en la sección original de abajo): notificar sobre un pago vía Stripe requeriría resolver "a quién le pertenece este alumno" para elegir el destinatario, lo cual añade una capa de resolución de destinatarios no trivial. Los dos eventos de notificación que sí se implementan (aprobación de `GroupChangeRequest`, asignación de `Lead` a un asesor) tienen un destinatario obvio y directo (`requestedBy`, `asesorAsignadoId`); el caso de Stripe se deja fuera de esta versión.
+
 ### Modelo de datos
 
 ```prisma
