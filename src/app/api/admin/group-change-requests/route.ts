@@ -65,18 +65,39 @@ export async function POST(request: Request) {
     }
   }
 
-  const changeRequest = await prisma.groupChangeRequest.create({
-    data: {
-      type: body.type as GroupChangeRequestType,
-      studentId: body.studentId,
-      currentGroupId: body.currentGroupId,
-      requestedGroupId: body.requestedGroupId ?? null,
-      reason,
-      requestedById: (session.user as { id: string }).id,
-    },
-  });
+  if (body.type === "CAMBIO_GRUPO") {
+    const requestedGroup = await prisma.group.findUnique({ where: { id: body.requestedGroupId! } });
+    if (!requestedGroup) {
+      return Response.json({ error: "Grupo destino inválido" }, { status: 400 });
+    }
+    if (requestedGroup.campusId !== enrollment.student.campusId) {
+      return Response.json({ error: "El grupo destino debe ser del mismo plantel" }, { status: 400 });
+    }
+    if (requestedGroup.id === body.currentGroupId) {
+      return Response.json(
+        { error: "El grupo destino debe ser diferente al grupo actual" },
+        { status: 400 }
+      );
+    }
+  }
 
-  return Response.json(changeRequest, { status: 201 });
+  try {
+    const changeRequest = await prisma.groupChangeRequest.create({
+      data: {
+        type: body.type as GroupChangeRequestType,
+        studentId: body.studentId,
+        currentGroupId: body.currentGroupId,
+        requestedGroupId: body.type === "CAMBIO_GRUPO" ? body.requestedGroupId! : null,
+        reason,
+        requestedById: (session.user as { id: string }).id,
+      },
+    });
+
+    return Response.json(changeRequest, { status: 201 });
+  } catch (error) {
+    console.error("Error al crear la solicitud de cambio de grupo:", error);
+    return Response.json({ error: "Ocurrió un error al procesar la solicitud" }, { status: 500 });
+  }
 }
 
 export async function GET() {

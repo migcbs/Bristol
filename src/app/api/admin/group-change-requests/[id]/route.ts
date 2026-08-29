@@ -39,6 +39,10 @@ export async function reviewGroupChangeRequest(
   id: string,
   decision: "APROBADA" | "RECHAZADA"
 ) {
+  if (decision !== "APROBADA" && decision !== "RECHAZADA") {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+
   const role = actor.role;
   const changeRequest = await prisma.groupChangeRequest.findUnique({
     where: { id },
