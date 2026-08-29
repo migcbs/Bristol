@@ -5,26 +5,27 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 
 const MODULES = [
-  { href: "/admin/admisiones", label: "Admisiones" },
-  { href: "/admin/cobranzas", label: "Cobranzas" },
-  { href: "/admin/reinscripciones", label: "Reinscripciones" },
-  { href: "/admin/incidencias", label: "Incidencias" },
-  { href: "/admin/comunicaciones", label: "Comunicaciones" },
-  { href: "/admin/mercadotecnia", label: "Mercadotecnia" },
-  { href: "/admin/recepcion/lista-espera", label: "Lista de Espera" },
-  { href: "/admin/recepcion/agenda", label: "Agenda" },
-  { href: "/admin/recepcion/bitacora", label: "Bitácora" },
-  { href: "/admin/recepcion/grupos-disponibilidad", label: "Disponibilidad" },
-  { href: "/admin/control-escolar/solicitudes", label: "Solicitudes" },
-  { href: "/admin/tickets", label: "Tickets" },
-];
+  { href: "/admin/admisiones", label: "Admisiones", module: "admisiones" },
+  { href: "/admin/cobranzas", label: "Cobranzas", module: "cobranzas" },
+  { href: "/admin/reinscripciones", label: "Reinscripciones", module: "reinscripciones" },
+  { href: "/admin/incidencias", label: "Incidencias", module: "incidencias" },
+  { href: "/admin/comunicaciones", label: "Comunicaciones", module: "comunicaciones" },
+  { href: "/admin/mercadotecnia", label: "Mercadotecnia", module: "mercadotecnia" },
+  { href: "/admin/recepcion/lista-espera", label: "Lista de Espera", module: "lista_espera" },
+  { href: "/admin/recepcion/agenda", label: "Agenda", module: "agenda" },
+  { href: "/admin/recepcion/bitacora", label: "Bitácora", module: "bitacora" },
+  { href: "/admin/recepcion/grupos-disponibilidad", label: "Disponibilidad", module: "disponibilidad" },
+  { href: "/admin/control-escolar/solicitudes", label: "Solicitudes", module: "solicitudes" },
+  { href: "/admin/tickets", label: "Tickets", module: "tickets" },
+] as const;
 
-export function AdminNav() {
+export function AdminNav({ visibleModules }: { visibleModules: Set<string> }) {
   const pathname = usePathname();
+  const visible = MODULES.filter((mod) => visibleModules.has(mod.module));
 
   return (
     <nav className="flex gap-4 border-b border-border px-6 py-2 text-sm font-medium">
-      {MODULES.map((mod) => (
+      {visible.map((mod) => (
         <Link
           key={mod.href}
           href={mod.href}
