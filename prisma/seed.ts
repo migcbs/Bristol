@@ -53,6 +53,82 @@ async function main() {
     },
   });
 
+  const staffRecepcion = await prisma.user.create({
+    data: {
+      email: "recepcion.coatepec@bristol-ingles.com",
+      name: "Recepción Coatepec",
+      role: "STAFF",
+      staffPosition: "RECEPCION",
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      staffCampuses: { create: { campusId: campusCoatepec.id } },
+    },
+  });
+
+  const staffCaja = await prisma.user.create({
+    data: {
+      email: "caja.xalapa@bristol-ingles.com",
+      name: "Caja Xalapa",
+      role: "STAFF",
+      staffPosition: "CAJA",
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      staffCampuses: { create: { campusId: campusXalapa.id } },
+    },
+  });
+
+  const staffControlEscolar = await prisma.user.create({
+    data: {
+      email: "controlescolar.coatepec@bristol-ingles.com",
+      name: "Control Escolar Coatepec",
+      role: "STAFF",
+      staffPosition: "CONTROL_ESCOLAR",
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      staffCampuses: { create: { campusId: campusCoatepec.id } },
+    },
+  });
+
+  const staffComercial = await prisma.user.create({
+    data: {
+      email: "comercial@bristol-ingles.com",
+      name: "Comercial Bristol",
+      role: "STAFF",
+      staffPosition: "COMERCIAL",
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      staffCampuses: {
+        create: [{ campusId: campusCoatepec.id }, { campusId: campusXalapa.id }],
+      },
+    },
+  });
+
+  const staffCalidadControl = await prisma.user.create({
+    data: {
+      email: "calidadycontrol@bristol-ingles.com",
+      name: "Calidad y Control",
+      role: "STAFF",
+      staffPosition: "CALIDAD_CONTROL",
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      staffCampuses: {
+        create: [{ campusId: campusCoatepec.id }, { campusId: campusXalapa.id }],
+      },
+    },
+  });
+
+  const staffDireccion = await prisma.user.create({
+    data: {
+      email: "direccion.xalapa@bristol-ingles.com",
+      name: "Dirección Xalapa",
+      role: "STAFF",
+      staffPosition: "DIRECCION_CAMPUS",
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      staffCampuses: { create: { campusId: campusXalapa.id } },
+    },
+  });
+
   const teacherBoth = await prisma.user.create({
     data: {
       email: "profesor.itinerante@bristol-ingles.com",
@@ -94,7 +170,11 @@ async function main() {
       passwordHash,
       emailVerifiedAt: new Date(),
       student: {
-        create: { campusId: campusCoatepec.id, matricula: "BRI-2026-00001" },
+        create: {
+          campusId: campusCoatepec.id,
+          matricula: "BRI-2026-00001",
+          fechaNacimiento: new Date("2012-03-10"),
+        },
       },
     },
     include: { student: true },
@@ -115,13 +195,42 @@ async function main() {
     },
   });
 
+  const adultStudentUser = await prisma.user.create({
+    data: {
+      email: "alumno.adulto.demo@bristol-ingles.com",
+      name: "Alumno Adulto Demo",
+      role: "STUDENT",
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      student: {
+        create: {
+          campusId: campusCoatepec.id,
+          matricula: "BRI-2026-00002",
+          fechaNacimiento: new Date("1995-05-20"),
+        },
+      },
+    },
+    include: { student: true },
+  });
+
+  await prisma.enrollment.create({
+    data: { studentId: adultStudentUser.student!.id, groupId: groupA1Coatepec.id },
+  });
+
   console.log({
     admin: admin.email,
     staffCoatepec: staffCoatepec.email,
     staffXalapa: staffXalapa.email,
+    staffRecepcion: staffRecepcion.email,
+    staffCaja: staffCaja.email,
+    staffControlEscolar: staffControlEscolar.email,
+    staffComercial: staffComercial.email,
+    staffCalidadControl: staffCalidadControl.email,
+    staffDireccion: staffDireccion.email,
     teacherBoth: teacherBoth.email,
     student: studentUser.email,
     parent: parentUser.email,
+    adultStudent: adultStudentUser.email,
     password: "Bristol123! (para todos los usuarios de seed)",
   });
 }
