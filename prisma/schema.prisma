@@ -75,6 +75,9 @@ model User {
   createdBlockEvaluations BlockEvaluation[]
   requestedGroupChanges   GroupChangeRequest[] @relation("RequestedBy")
   reviewedGroupChanges    GroupChangeRequest[] @relation("ReviewedBy")
+  createdTickets          InterAreaTicket[]    @relation("TicketCreatedBy")
+  assignedTickets         InterAreaTicket[]    @relation("TicketAssignedTo")
+  notifications           Notification[]
 }
 
 model StaffCampus {
@@ -409,6 +412,12 @@ enum GroupChangeRequestStatus {
   RECHAZADA
 }
 
+enum TicketStatus {
+  ABIERTO
+  EN_PROCESO
+  RESUELTO
+}
+
 model GroupChangeRequest {
   id               String                   @id @default(cuid())
   type             GroupChangeRequestType
@@ -427,4 +436,29 @@ model GroupChangeRequest {
   requestedGroup Group?  @relation("RequestedGroup", fields: [requestedGroupId], references: [id])
   requestedBy    User    @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
   reviewedBy     User?   @relation("ReviewedBy", fields: [reviewedById], references: [id])
+}
+
+model InterAreaTicket {
+  id           String       @id @default(cuid())
+  title        String
+  description  String
+  createdById  String
+  assignedToId String?
+  status       TicketStatus @default(ABIERTO)
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+
+  createdBy  User  @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  assignedTo User? @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  message   String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
