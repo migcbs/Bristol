@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope } from "@/lib/campus-scope";
+import { notify } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import type { LeadStatus } from "@prisma/client";
 
-const VALID_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "ENROLLED", "LOST"];
+const VALID_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "PLACEMENT_SCHEDULED", "ENROLLED", "LOST"];
 
 export async function PATCH(
   request: Request,
@@ -19,7 +20,7 @@ export async function PATCH(
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  let body: { status?: string; campusId?: string | null };
+  let body: { status?: string; campusId?: string | null; asesorAsignadoId?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -36,6 +37,13 @@ export async function PATCH(
     const campus = await prisma.campus.findUnique({ where: { id: targetCampusId } });
     if (!campus) {
       return Response.json({ error: "Plantel inválido" }, { status: 400 });
+    }
+  }
+
+  if (body.asesorAsignadoId !== undefined && body.asesorAsignadoId !== null) {
+    const advisor = await prisma.user.findUnique({ where: { id: body.asesorAsignadoId } });
+    if (!advisor) {
+      return Response.json({ error: "Asesor inválido" }, { status: 400 });
     }
   }
 
@@ -65,10 +73,20 @@ export async function PATCH(
     return Response.json({ error: "No encontrado" }, { status: 404 });
   }
 
-  const data: { status?: LeadStatus; campusId?: string | null } = {};
+  const data: { status?: LeadStatus; campusId?: string | null; asesorAsignadoId?: string | null } = {};
   if (body.status !== undefined) data.status = body.status as LeadStatus;
   if (body.campusId !== undefined) data.campusId = body.campusId;
+  if (body.asesorAsignadoId !== undefined) data.asesorAsignadoId = body.asesorAsignadoId;
 
   const updated = await prisma.lead.update({ where: { id }, data });
+
+  if (body.asesorAsignadoId !== undefined && body.asesorAsignadoId !== null) {
+    await notify(
+      body.asesorAsignadoId,
+      `Se te asignó el lead "${lead.name}"`,
+      "/admin/admisiones"
+    );
+  }
+
   return Response.json(updated);
 }
