@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn(), assertCampusInScope: vi.fn() }));
+vi.mock("@/lib/staff-permissions", () => ({ hasModuleAccess: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: { student: { findUnique: vi.fn() }, invoice: { create: vi.fn() } },
 }));
 
 import { auth } from "@/lib/auth";
 import { assertCampusInScope } from "@/lib/campus-scope";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import { POST } from "@/app/api/admin/invoices/from-reception/route";
 
@@ -27,7 +29,10 @@ const VALID_BODY = {
 };
 
 describe("POST /api/admin/invoices/from-reception", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (hasModuleAccess as any).mockResolvedValue("full");
+  });
 
   it("returns 401 without a session", async () => {
     (auth as any).mockResolvedValue(null);

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   }
 
   const access = await hasModuleAccess(session.user as { id: string; role: any }, "cobranzas");
-  if (access === "none") {
+  if (access !== "full" && access !== "initiate") {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 

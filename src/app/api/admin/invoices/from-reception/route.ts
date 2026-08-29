@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { assertCampusInScope } from "@/lib/campus-scope";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
@@ -13,6 +14,11 @@ export async function POST(request: Request) {
   }
   const role = (session.user as { role: Role }).role;
   if (role !== "ADMIN" && role !== "STAFF") {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const access = await hasModuleAccess(session.user as { id: string; role: Role }, "cobranzas");
+  if (access !== "full" && access !== "initiate") {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 

@@ -16,7 +16,10 @@ export default async function CobranzasPage() {
   if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
 
   const access = await hasModuleAccess(session.user as { id: string; role: any }, "cobranzas");
-  if (access === "none") redirect("/admin");
+  // This page is all-or-nothing today (list + creation form, no read-only view),
+  // so "read" access (Calidad y Control / Dirección de Campus) is redirected too —
+  // only "full"/"initiate" (Caja/Recepción) should operate it.
+  if (access === "none" || access === "read") redirect("/admin");
 
   const scope = await getCampusScope(session.user as { id: string; role: any });
 
