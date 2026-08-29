@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope, enrollmentScopeWhere } from "@/lib/campus-scope";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
@@ -11,6 +12,9 @@ export default async function ReinscripcionesPage() {
   if (!session?.user) redirect("/login");
   const role = (session.user as { role: string }).role;
   if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
+
+  const access = await hasModuleAccess(session.user as { id: string; role: Role }, "reinscripciones");
+  if (access === "none") redirect("/admin/tickets");
 
   const scope = await getCampusScope(session.user as { id: string; role: Role });
   const enrollmentWhere = enrollmentScopeWhere(scope);

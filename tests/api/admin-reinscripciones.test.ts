@@ -5,6 +5,7 @@ const txCreate = vi.fn();
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn() }));
+vi.mock("@/lib/staff-permissions", () => ({ hasModuleAccess: vi.fn().mockResolvedValue("full") }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     enrollment: { findUnique: vi.fn(), updateMany: vi.fn(), create: vi.fn() },
