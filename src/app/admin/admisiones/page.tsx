@@ -19,9 +19,14 @@ export default async function AdmisionesPage() {
 
   const where = leadScopeWhere(scope);
 
-  const [leads, campuses] = await Promise.all([
+  const [leads, campuses, advisors] = await Promise.all([
     prisma.lead.findMany({ where, orderBy: { createdAt: "desc" }, include: { campus: true } }),
     prisma.campus.findMany({ orderBy: { name: "asc" } }),
+    prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "STAFF"] } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
   ]);
 
   return (
@@ -63,6 +68,8 @@ export default async function AdmisionesPage() {
                     initialStatus={lead.status}
                     initialCampusId={lead.campusId}
                     campuses={campuses}
+                    initialAsesorAsignadoId={lead.asesorAsignadoId}
+                    advisors={advisors}
                   />
                 </TableCell>
               </TableRow>

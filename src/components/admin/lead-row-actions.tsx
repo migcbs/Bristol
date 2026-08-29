@@ -10,18 +10,23 @@ export function LeadRowActions({
   initialStatus,
   initialCampusId,
   campuses,
+  initialAsesorAsignadoId,
+  advisors,
 }: {
   leadId: string;
   initialStatus: LeadStatus;
   initialCampusId: string | null;
   campuses: { id: string; name: string }[];
+  initialAsesorAsignadoId?: string | null;
+  advisors?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [campusId, setCampusId] = useState(initialCampusId ?? "");
+  const [asesorAsignadoId, setAsesorAsignadoId] = useState(initialAsesorAsignadoId ?? "");
   const [error, setError] = useState<string | null>(null);
 
-  async function update(data: { status?: LeadStatus; campusId?: string | null }) {
+  async function update(data: { status?: LeadStatus; campusId?: string | null; asesorAsignadoId?: string | null }) {
     setError(null);
     const res = await fetch(`/api/admin/leads/${leadId}`, {
       method: "PATCH",
@@ -53,6 +58,14 @@ export function LeadRowActions({
     if (!ok) setCampusId(previous);
   }
 
+  async function handleAsesorChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const next = e.target.value;
+    const previous = asesorAsignadoId;
+    setAsesorAsignadoId(next);
+    const ok = await update({ asesorAsignadoId: next === "" ? null : next });
+    if (!ok) setAsesorAsignadoId(previous);
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex gap-2">
@@ -81,6 +94,21 @@ export function LeadRowActions({
             </option>
           ))}
         </select>
+        {advisors && (
+          <select
+            value={asesorAsignadoId}
+            onChange={handleAsesorChange}
+            aria-label="Asesor"
+            className="rounded-md border border-border px-2 py-1 text-xs"
+          >
+            <option value="">Sin asignar</option>
+            {advisors.map((advisor) => (
+              <option key={advisor.id} value={advisor.id}>
+                {advisor.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       {error && <p className="text-xs text-accent-dark">{error}</p>}
     </div>

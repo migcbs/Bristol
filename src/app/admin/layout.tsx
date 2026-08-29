@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { CommandPalette } from "@/components/admin/command-palette";
 import { QuickCreateDrawer } from "@/components/admin/quick-create-drawer";
+import { NotificationBell } from "@/components/admin/notification-bell";
 import type { Role } from "@prisma/client";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <span className="font-bold text-primary">Bristol Admin</span>
         <div className="flex items-center gap-4 text-sm">
           <QuickCreateDrawer campuses={campuses} />
+          <NotificationBell />
           <span>{session?.user?.name}</span>
           <form
             action={async () => {
