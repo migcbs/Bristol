@@ -56,6 +56,20 @@ describe("PATCH /api/admin/tickets/[id]", () => {
     });
   });
 
+  it("treats an empty-string assignedToId as null without checking existence", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.interAreaTicket.findUnique as any).mockResolvedValue({ id: "t1", status: "ABIERTO" });
+    (prisma.interAreaTicket.update as any).mockResolvedValue({ id: "t1", assignedToId: null });
+
+    const res = await PATCH(jsonRequest({ assignedToId: "" }), makeParams("t1"));
+    expect(res.status).toBe(200);
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.interAreaTicket.update).toHaveBeenCalledWith({
+      where: { id: "t1" },
+      data: { assignedToId: null },
+    });
+  });
+
   it("allows reassignment via assignedToId", async () => {
     (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
     (prisma.interAreaTicket.findUnique as any).mockResolvedValue({ id: "t1", status: "ABIERTO" });

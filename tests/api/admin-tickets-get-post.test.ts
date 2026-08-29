@@ -65,6 +65,23 @@ describe("POST /api/admin/tickets", () => {
     expect(prisma.interAreaTicket.create).not.toHaveBeenCalled();
   });
 
+  it("treats an empty-string assignedToId as null without checking existence", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.interAreaTicket.create as any).mockResolvedValue({ id: "t1" });
+
+    const res = await POST(jsonRequest({ title: "t", description: "d", assignedToId: "" }));
+    expect(res.status).toBe(201);
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.interAreaTicket.create).toHaveBeenCalledWith({
+      data: {
+        title: "t",
+        description: "d",
+        assignedToId: null,
+        createdById: "a1",
+      },
+    });
+  });
+
   it("creates the ticket on success", async () => {
     (auth as any).mockResolvedValue({ user: { id: "a1", role: "STAFF" } });
     (prisma.interAreaTicket.create as any).mockResolvedValue({ id: "t1" });

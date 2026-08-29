@@ -8,9 +8,11 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/campus-scope", () => ({ assertCampusInScope: vi.fn() }));
+vi.mock("@/lib/notifications", () => ({ notify: vi.fn() }));
 
 import { auth } from "@/lib/auth";
 import { assertCampusInScope } from "@/lib/campus-scope";
+import { notify } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { PATCH, reviewGroupChangeRequest } from "@/app/api/admin/group-change-requests/[id]/route";
 
@@ -93,7 +95,12 @@ describe("PATCH /api/admin/group-change-requests/[id]", () => {
 
   it("on REJECTED decision, just updates status/reviewedBy without touching enrollments", async () => {
     (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
-    (prisma.groupChangeRequest.findUnique as any).mockResolvedValue({ id: "gcr1", status: "PENDIENTE", type: "BAJA" });
+    (prisma.groupChangeRequest.findUnique as any).mockResolvedValue({
+      id: "gcr1",
+      status: "PENDIENTE",
+      type: "BAJA",
+      requestedById: "requester1",
+    });
     (prisma.groupChangeRequest.update as any).mockResolvedValue({ id: "gcr1", status: "RECHAZADA" });
 
     const res = await PATCH(jsonRequest({ decision: "RECHAZADA" }), makeParams("gcr1"));
@@ -103,6 +110,11 @@ describe("PATCH /api/admin/group-change-requests/[id]", () => {
       where: { id: "gcr1" },
       data: { status: "RECHAZADA", reviewedById: "a1", reviewedAt: expect.any(Date) },
     });
+    expect(notify).toHaveBeenCalledWith(
+      "requester1",
+      expect.stringContaining("rechazada"),
+      "/admin/control-escolar/solicitudes"
+    );
   });
 
   it("on APROBADA + BAJA, closes the enrollment and marks the request approved in one transaction", async () => {
@@ -113,6 +125,7 @@ describe("PATCH /api/admin/group-change-requests/[id]", () => {
       type: "BAJA",
       studentId: "st1",
       currentGroupId: "g1",
+      requestedById: "requester1",
     });
     (prisma.$transaction as any).mockImplementation(async (fn: any) =>
       fn({
@@ -124,6 +137,11 @@ describe("PATCH /api/admin/group-change-requests/[id]", () => {
     const res = await PATCH(jsonRequest({ decision: "APROBADA" }), makeParams("gcr1"));
     expect(res.status).toBe(200);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(
+      "requester1",
+      expect.stringContaining("aprobada"),
+      "/admin/control-escolar/solicitudes"
+    );
   });
 
   it("on APROBADA + CAMBIO_GRUPO, closes current enrollment and creates a new one in one transaction", async () => {
