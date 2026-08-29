@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn() }));
+vi.mock("@/lib/staff-permissions", () => ({ hasModuleAccess: vi.fn().mockResolvedValue("full") }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     invoice: { create: vi.fn(), findMany: vi.fn() },

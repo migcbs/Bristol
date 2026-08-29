@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getCampusScope } from "@/lib/campus-scope";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
@@ -13,6 +14,9 @@ export default async function CobranzasPage() {
   if (!session?.user) redirect("/login");
   const role = (session.user as { role: string }).role;
   if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
+
+  const access = await hasModuleAccess(session.user as { id: string; role: any }, "cobranzas");
+  if (access === "none") redirect("/admin");
 
   const scope = await getCampusScope(session.user as { id: string; role: any });
 
