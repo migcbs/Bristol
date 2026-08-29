@@ -74,7 +74,7 @@ Esta tabla es un punto de partida razonable basado en el organigrama y en lo que
 
 - **Hoy** (verificado en el código de Cobranzas): tanto `STUDENT` como `PARENT` ya comparten la misma lógica de alcance de facturas (`getVisibleStudentIds`) y el mismo botón de pago — es decir, **un alumno mayor de edad ya puede pagar hoy**, por accidente de diseño, no por decisión explícita. El hueco real es el opuesto al que describes: **un alumno menor de edad también puede pagar hoy**, y no debería.
 - **Cambio necesario:** en el endpoint de checkout y en el botón "Pagar" del portal, si `role === "STUDENT"` y el alumno es menor de edad (`computeAgeBracket !== "ADULTO"`), bloquear el pago y mostrar Cobranzas como **solo notificación** (ve el estatus de sus facturas, sin botón de pago) — el pago debe venir de la cuenta `PARENT` vinculada vía `ParentStudent`. `PARENT` siempre puede pagar, sin importar la edad del hijo. `STUDENT` adulto puede pagar sin restricción (comportamiento actual, ahora ya intencional).
-- **Caso abierto a decidir:** ¿qué pasa con un alumno cuya `fechaNacimiento` es `null` (dato no capturado, común en datos ya existentes)? Propongo tratarlo como "no se puede verificar mayoría de edad" → mismo trato que menor (bloquear pago hasta que Recepción capture la fecha de nacimiento) — es la interpretación más prudente, pero es tu decisión final ya que afecta flujos de cobro reales.
+- **Decisión confirmada:** un alumno con `fechaNacimiento` en `null` se trata como menor (no se puede verificar mayoría de edad → se bloquea el pago hasta que Recepción capture la fecha de nacimiento).
 
 ## Cuentas de prueba a sembrar
 
@@ -95,6 +95,25 @@ Sustituyendo/ampliando las 6 cuentas actuales del seed:
 | `padre.demo@bristol-ingles.com` | PARENT | — | (vinculado al alumno menor) |
 
 Todas con contraseña `Bristol123!`.
+
+## Decisiones confirmadas por el usuario (2026-08-29)
+
+- La matriz de módulos por puesto queda aprobada tal como está en este documento.
+- Fecha de nacimiento faltante = tratado como menor de edad (bloquea pago).
+
+## Alcance de la implementación (primera versión)
+
+Dado el tamaño de la matriz completa (toca rutas de 6 specs ya construidas), esta primera versión implementa:
+
+1. **Filtrado de navegación por puesto** (`AdminNav` deja de mostrar módulos sin acceso) — el cambio de mayor impacto y menor riesgo, cubre toda la matriz a nivel de visibilidad.
+2. **Aplicación a nivel de ruta** para los tres casos de mayor riesgo si se dejan solo a nivel de navegación (un usuario podría llamar la API directamente sin pasar por el menú):
+   - Cobranzas: Caja con acceso completo, Recepción solo puede crear (vía "Enviar a Caja"), Control Escolar y Comercial bloqueados.
+   - Reinscripciones: solo Control Escolar (y Admin).
+   - Aprobación de solicitudes de baja/cambio de grupo: solo Control Escolar, Calidad y Control, Dirección de Campus (y Admin).
+3. **Restricción de pago por edad**: bloquear el botón/endpoint de pago para `STUDENT` menor de edad; `PARENT` siempre puede pagar.
+4. **Cuentas de prueba nuevas** por puesto + alumno menor/adulto.
+
+Las demás filas de la matriz (Admisiones/Mercadotecnia limitado a Comercial, Comunicaciones, Incidencias, Disponibilidad, Calificaciones por bloque a nivel admin) quedan cubiertas por el filtrado de navegación de este mismo pase, pero **sin bloqueo a nivel de ruta todavía** — es una extensión directa (una línea por ruta, usando el mismo helper `hasModuleAccess`) que se puede hacer como fast-follow sin rediseño.
 
 ## Fuera de alcance de esta spec
 
