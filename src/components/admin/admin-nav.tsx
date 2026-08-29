@@ -16,6 +16,7 @@ const MODULES = [
   { href: "/admin/recepcion/bitacora", label: "Bitácora" },
   { href: "/admin/recepcion/grupos-disponibilidad", label: "Disponibilidad" },
   { href: "/admin/control-escolar/solicitudes", label: "Solicitudes" },
+  { href: "/admin/tickets", label: "Tickets" },
 ];
 
 export function AdminNav() {
