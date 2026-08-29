@@ -9,6 +9,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 vi.mock("@/lib/campus-scope", () => ({ assertCampusInScope: vi.fn() }));
 vi.mock("@/lib/notifications", () => ({ notify: vi.fn() }));
+vi.mock("@/lib/staff-permissions", () => ({ hasModuleAccess: vi.fn().mockResolvedValue("full") }));
 
 import { auth } from "@/lib/auth";
 import { assertCampusInScope } from "@/lib/campus-scope";

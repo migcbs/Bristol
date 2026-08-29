@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { assertCampusInScope } from "@/lib/campus-scope";
 import { notify } from "@/lib/notifications";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
@@ -45,6 +46,12 @@ export async function reviewGroupChangeRequest(
   }
 
   const role = actor.role;
+
+  const access = await hasModuleAccess(actor, "solicitudes");
+  if (access !== "full") {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
   const changeRequest = await prisma.groupChangeRequest.findUnique({
     where: { id },
     include: { student: true },
