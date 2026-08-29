@@ -50,6 +50,9 @@ export async function POST(request: Request) {
   if (enrollment.group.teacherId !== (session.user as { id: string }).id) {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
+  if (enrollment.completedAt !== null) {
+    return Response.json({ error: "La inscripción ya no está activa" }, { status: 400 });
+  }
 
   const scores = SCORE_FIELDS.map((f) => body[f] as number);
   const promedioBloque = Math.round((scores.reduce((sum, s) => sum + s, 0) / 5) * 100) / 100;

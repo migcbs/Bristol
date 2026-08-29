@@ -58,6 +58,14 @@ describe("POST /api/admin/invoices/from-reception", () => {
     expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
 
+  it("returns 400 when baseCents exceeds the upper bound", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "st1", campusId: "c1" });
+    const res = await POST(jsonRequest({ ...VALID_BODY, baseCents: 100_000_001 }));
+    expect(res.status).toBe(400);
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for a scholarship percent out of 0-100 range", async () => {
     (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
     (prisma.student.findUnique as any).mockResolvedValue({ id: "st1", campusId: "c1" });
@@ -88,6 +96,22 @@ describe("POST /api/admin/invoices/from-reception", () => {
         earlyPaymentDiscountCents: 5000,
         amountCents: 155000,
         status: "PENDING",
+      }),
+    });
+  });
+
+  it("rounds scholarshipPercent to 2 decimals and uses the rounded value in amountCents", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "st1", campusId: "c1" });
+    (prisma.invoice.create as any).mockResolvedValue({ id: "inv1" });
+
+    const res = await POST(jsonRequest({ ...VALID_BODY, baseCents: 300000, scholarshipPercent: 33.333 }));
+    expect(res.status).toBe(201);
+    // rounded scholarshipPercent = 33.33; scholarshipCents = round(300000*33.33/100) = 99990
+    expect(prisma.invoice.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        scholarshipPercent: 33.33,
+        amountCents: 200010,
       }),
     });
   });

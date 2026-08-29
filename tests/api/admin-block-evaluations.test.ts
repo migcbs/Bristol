@@ -60,16 +60,36 @@ describe("POST /api/admin/block-evaluations", () => {
     expect(prisma.blockEvaluation.create).not.toHaveBeenCalled();
   });
 
+  it("returns 400 when the enrollment is no longer active (completedAt is set)", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+    (prisma.enrollment.findUnique as any).mockResolvedValue({
+      id: "e1",
+      group: { teacherId: "t1" },
+      completedAt: new Date("2020-01-01"),
+    });
+    const res = await POST(jsonRequest(VALID_BODY));
+    expect(res.status).toBe(400);
+    expect(prisma.blockEvaluation.create).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when any score is out of 0-100 range", async () => {
     (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
-    (prisma.enrollment.findUnique as any).mockResolvedValue({ id: "e1", group: { teacherId: "t1" } });
+    (prisma.enrollment.findUnique as any).mockResolvedValue({
+      id: "e1",
+      group: { teacherId: "t1" },
+      completedAt: null,
+    });
     const res = await POST(jsonRequest({ ...VALID_BODY, notaGrammar: 150 }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for a duplicate bloqueNumero on the same enrollment (P2002)", async () => {
     (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
-    (prisma.enrollment.findUnique as any).mockResolvedValue({ id: "e1", group: { teacherId: "t1" } });
+    (prisma.enrollment.findUnique as any).mockResolvedValue({
+      id: "e1",
+      group: { teacherId: "t1" },
+      completedAt: null,
+    });
     (prisma.blockEvaluation.create as any).mockRejectedValue(
       Object.assign(new Error("Unique constraint failed"), { code: "P2002" })
     );
@@ -79,7 +99,11 @@ describe("POST /api/admin/block-evaluations", () => {
 
   it("computes promedioBloque and creates the evaluation on success", async () => {
     (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
-    (prisma.enrollment.findUnique as any).mockResolvedValue({ id: "e1", group: { teacherId: "t1" } });
+    (prisma.enrollment.findUnique as any).mockResolvedValue({
+      id: "e1",
+      group: { teacherId: "t1" },
+      completedAt: null,
+    });
     (prisma.blockEvaluation.create as any).mockResolvedValue({ id: "be1" });
 
     const res = await POST(jsonRequest(VALID_BODY));

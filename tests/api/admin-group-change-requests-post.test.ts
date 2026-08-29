@@ -6,6 +6,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     student: { findUnique: vi.fn() },
     enrollment: { findFirst: vi.fn() },
+    group: { findUnique: vi.fn() },
     groupChangeRequest: { create: vi.fn(), findMany: vi.fn() },
   },
 }));
@@ -79,6 +80,70 @@ describe("POST /api/admin/group-change-requests", () => {
         reason: "Cambio de ciudad",
         requestedById: "a1",
       },
+    });
+  });
+
+  it("forces requestedGroupId to null for a BAJA request even if the client sends one", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.enrollment.findFirst as any).mockResolvedValue({ id: "e1", student: { campusId: "c1" } });
+    (prisma.groupChangeRequest.create as any).mockResolvedValue({ id: "gcr1" });
+
+    const res = await POST(jsonRequest({ ...VALID_BODY, requestedGroupId: "g-sneaky" }));
+    expect(res.status).toBe(201);
+    expect(prisma.groupChangeRequest.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ requestedGroupId: null }),
+    });
+    expect(prisma.group.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when requestedGroupId doesn't exist", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.enrollment.findFirst as any).mockResolvedValue({ id: "e1", student: { campusId: "c1" } });
+    (prisma.group.findUnique as any).mockResolvedValue(null);
+
+    const res = await POST(
+      jsonRequest({ ...VALID_BODY, type: "CAMBIO_GRUPO", requestedGroupId: "g-missing" })
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.groupChangeRequest.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when requestedGroupId is at a different campus than the student", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.enrollment.findFirst as any).mockResolvedValue({ id: "e1", student: { campusId: "c1" } });
+    (prisma.group.findUnique as any).mockResolvedValue({ id: "g2", campusId: "c2" });
+
+    const res = await POST(
+      jsonRequest({ ...VALID_BODY, type: "CAMBIO_GRUPO", requestedGroupId: "g2" })
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.groupChangeRequest.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when requestedGroupId is the same as currentGroupId", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.enrollment.findFirst as any).mockResolvedValue({ id: "e1", student: { campusId: "c1" } });
+    (prisma.group.findUnique as any).mockResolvedValue({ id: "g1", campusId: "c1" });
+
+    const res = await POST(
+      jsonRequest({ ...VALID_BODY, type: "CAMBIO_GRUPO", requestedGroupId: "g1" })
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.groupChangeRequest.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a CAMBIO_GRUPO request when requestedGroupId is valid and same-campus", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (prisma.enrollment.findFirst as any).mockResolvedValue({ id: "e1", student: { campusId: "c1" } });
+    (prisma.group.findUnique as any).mockResolvedValue({ id: "g2", campusId: "c1" });
+    (prisma.groupChangeRequest.create as any).mockResolvedValue({ id: "gcr1" });
+
+    const res = await POST(
+      jsonRequest({ ...VALID_BODY, type: "CAMBIO_GRUPO", requestedGroupId: "g2" })
+    );
+    expect(res.status).toBe(201);
+    expect(prisma.groupChangeRequest.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ requestedGroupId: "g2" }),
     });
   });
 });

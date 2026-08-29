@@ -12,7 +12,7 @@ vi.mock("@/lib/campus-scope", () => ({ assertCampusInScope: vi.fn() }));
 import { auth } from "@/lib/auth";
 import { assertCampusInScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
-import { PATCH } from "@/app/api/admin/group-change-requests/[id]/route";
+import { PATCH, reviewGroupChangeRequest } from "@/app/api/admin/group-change-requests/[id]/route";
 
 function jsonRequest(body: unknown) {
   return new Request("http://localhost/api/admin/group-change-requests/gcr1", {
@@ -149,6 +149,18 @@ describe("PATCH /api/admin/group-change-requests/[id]", () => {
     const res = await PATCH(jsonRequest({ decision: "APROBADA" }), makeParams("gcr1"));
     expect(res.status).toBe(200);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("reviewGroupChangeRequest called directly with a garbage decision returns 400 and touches nothing", async () => {
+    const res = await reviewGroupChangeRequest(
+      { id: "a1", role: "ADMIN" },
+      "gcr1",
+      "BOGUS" as any
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.groupChangeRequest.findUnique).not.toHaveBeenCalled();
+    expect(prisma.groupChangeRequest.update).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("returns 400 if the enrollment was already completed by the time of approval (race guard)", async () => {

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
 const MAX_DESCRIPTION_LENGTH = 200;
+const MAX_CENTS = 100_000_000;
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
     typeof body.baseCents !== "number" ||
     !Number.isInteger(body.baseCents) ||
     body.baseCents <= 0 ||
+    body.baseCents > MAX_CENTS ||
     !body.dueDate
   ) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
@@ -69,21 +71,27 @@ export async function POST(request: Request) {
     }
   }
 
-  const scholarshipCents = Math.round((body.baseCents * scholarshipPercent) / 100);
+  const roundedScholarshipPercent = Math.round(scholarshipPercent * 100) / 100;
+  const scholarshipCents = Math.round((body.baseCents * roundedScholarshipPercent) / 100);
   const amountCents = Math.max(0, body.baseCents - scholarshipCents - earlyPaymentDiscountCents);
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      studentId: body.studentId,
-      description,
-      baseCents: body.baseCents,
-      scholarshipPercent,
-      earlyPaymentDiscountCents,
-      amountCents,
-      dueDate,
-      status: "PENDING",
-    },
-  });
+  try {
+    const invoice = await prisma.invoice.create({
+      data: {
+        studentId: body.studentId,
+        description,
+        baseCents: body.baseCents,
+        scholarshipPercent: roundedScholarshipPercent,
+        earlyPaymentDiscountCents,
+        amountCents,
+        dueDate,
+        status: "PENDING",
+      },
+    });
 
-  return Response.json(invoice, { status: 201 });
+    return Response.json(invoice, { status: 201 });
+  } catch (error) {
+    console.error("Error al crear la factura desde recepción:", error);
+    return Response.json({ error: "Ocurrió un error al procesar la factura" }, { status: 500 });
+  }
 }
