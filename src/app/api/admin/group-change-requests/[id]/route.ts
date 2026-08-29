@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { assertCampusInScope } from "@/lib/campus-scope";
+import { notify } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
@@ -74,6 +75,11 @@ export async function reviewGroupChangeRequest(
       where: { id },
       data: { status: "RECHAZADA", reviewedById: reviewerId, reviewedAt: new Date() },
     });
+    await notify(
+      changeRequest.requestedById,
+      "Tu solicitud de cambio de grupo fue rechazada",
+      "/admin/control-escolar/solicitudes"
+    );
     return Response.json(updated);
   }
 
@@ -100,6 +106,11 @@ export async function reviewGroupChangeRequest(
         data: { status: "APROBADA", reviewedById: reviewerId, reviewedAt: new Date() },
       });
     });
+    await notify(
+      changeRequest.requestedById,
+      "Tu solicitud de cambio de grupo fue aprobada",
+      "/admin/control-escolar/solicitudes"
+    );
     return Response.json(result);
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "ALREADY_COMPLETED") {
