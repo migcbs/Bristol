@@ -31,20 +31,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return Response.json({ error: "No encontrado" }, { status: 404 });
   }
 
-  if (body.assignedToId) {
-    const assignee = await prisma.user.findUnique({ where: { id: body.assignedToId } });
+  const assignedToId = body.assignedToId === "" ? null : body.assignedToId;
+
+  if (assignedToId !== undefined && assignedToId !== null) {
+    const assignee = await prisma.user.findUnique({ where: { id: assignedToId } });
     if (!assignee) {
       return Response.json({ error: "Usuario asignado inválido" }, { status: 400 });
     }
   }
 
-  const data: { status?: TicketStatus; resolvedAt?: Date | null; assignedToId?: string } = {};
+  const data: { status?: TicketStatus; resolvedAt?: Date | null; assignedToId?: string | null } = {};
   if (body.status !== undefined) {
     data.status = body.status as TicketStatus;
     data.resolvedAt = body.status === "RESUELTO" ? new Date() : null;
   }
   if (body.assignedToId !== undefined) {
-    data.assignedToId = body.assignedToId;
+    data.assignedToId = assignedToId;
   }
 
   const updated = await prisma.interAreaTicket.update({ where: { id }, data });

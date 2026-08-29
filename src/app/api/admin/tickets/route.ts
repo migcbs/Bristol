@@ -49,8 +49,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
-  if (body.assignedToId) {
-    const assignee = await prisma.user.findUnique({ where: { id: body.assignedToId } });
+  const assignedToId = body.assignedToId === "" ? null : body.assignedToId;
+
+  if (assignedToId !== undefined && assignedToId !== null) {
+    const assignee = await prisma.user.findUnique({ where: { id: assignedToId } });
     if (!assignee) {
       return Response.json({ error: "Usuario asignado inválido" }, { status: 400 });
     }
@@ -60,7 +62,7 @@ export async function POST(request: Request) {
     data: {
       title,
       description,
-      assignedToId: body.assignedToId ?? null,
+      assignedToId: assignedToId ?? null,
       createdById: (session.user as { id: string }).id,
     },
   });
