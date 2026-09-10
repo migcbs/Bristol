@@ -7,7 +7,6 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import NextImage from "next/image";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -105,7 +104,6 @@ export function LocationMap({
 
     tiles.forEach((tile) => {
       const img = new Image();
-      img.crossOrigin = "anonymous";
       img.onload = () => {
         loadedCount++;
         if (loadedCount === totalTiles) setTilesLoaded(true);
@@ -196,13 +194,18 @@ export function LocationMap({
                       animate={{ opacity: tilesLoaded ? 1 : 0 }}
                       transition={{ duration: 0.3, delay: index * 0.05 }}
                     >
-                      <NextImage
+                      {/* Plain <img>, not next/image: these are external
+                          OSM/Carto map tiles. next/image would need the
+                          tile host allow-listed in next.config and would
+                          just render blank in production otherwise —
+                          which is exactly what happened on Vercel. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={tile.url}
                         alt=""
                         width={256}
                         height={256}
-                        unoptimized
-                        crossOrigin="anonymous"
+                        loading="lazy"
                         className="h-full w-full"
                       />
                     </motion.div>
