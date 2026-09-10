@@ -7,6 +7,9 @@ vi.mock("@/lib/prisma", () => ({
     student: { findMany: vi.fn() },
     lead: { findMany: vi.fn() },
     group: { findMany: vi.fn() },
+    curso: { findMany: vi.fn() },
+    user: { findMany: vi.fn() },
+    campus: { findMany: vi.fn() },
   },
 }));
 
@@ -47,11 +50,13 @@ describe("GET /api/admin/search", () => {
     (prisma.student.findMany as any).mockResolvedValue([]);
     (prisma.lead.findMany as any).mockResolvedValue([]);
     (prisma.group.findMany as any).mockResolvedValue([]);
+    (prisma.curso.findMany as any).mockResolvedValue([]);
+    (prisma.user.findMany as any).mockResolvedValue([]);
 
     const res = await GET(getRequest("?q=ana"));
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ students: [], leads: [], groups: [] });
+    expect(body).toEqual({ intent: null, students: [], leads: [], groups: [], cursos: [], parents: [] });
 
     expect(prisma.student.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -72,6 +77,40 @@ describe("GET /api/admin/search", () => {
       expect.objectContaining({
         take: 5,
         where: expect.objectContaining({ campusId: { in: ["c1"] } }),
+      })
+    );
+    expect(prisma.curso.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 5 }));
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 5, where: expect.objectContaining({ role: "PARENT" }) })
+    );
+  });
+
+  it("recognizes a smart 'alumnos del grupo X' query and only queries students", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "a1", role: "ADMIN" } });
+    (getCampusScope as any).mockResolvedValue({ type: "ALL" });
+    (prisma.student.findMany as any).mockResolvedValue([]);
+
+    const res = await GET(getRequest("?q=" + encodeURIComponent("alumnos del grupo A1")));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.intent).toEqual({ type: "students_by_group", term: "A1" });
+    expect(prisma.lead.findMany).not.toHaveBeenCalled();
+    expect(prisma.group.findMany).not.toHaveBeenCalled();
+    expect(prisma.student.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          enrollments: {
+            some: {
+              completedAt: null,
+              group: {
+                OR: [
+                  { name: { contains: "A1", mode: "insensitive" } },
+                  { codigoGrupo: { contains: "A1", mode: "insensitive" } },
+                ],
+              },
+            },
+          },
+        }),
       })
     );
   });

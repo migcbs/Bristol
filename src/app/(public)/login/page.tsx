@@ -1,11 +1,32 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { SignInPage, type Testimonial } from "@/components/ui/sign-in";
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    initials: "MF",
+    name: "María Fernanda G.",
+    role: "Alumna, nivel B2",
+    text: "Entré sin saber casi nada y en año y medio ya podía sostener una entrevista de trabajo en inglés.",
+  },
+  {
+    initials: "RC",
+    name: "Roberto C.",
+    role: "Padre de familia",
+    text: "Me encanta que pueda ver el avance de mi hija y sus calificaciones desde el portal.",
+  },
+  {
+    initials: "AS",
+    name: "Ana Sofía L.",
+    role: "Alumna, nivel C1",
+    text: "Los grupos pequeños hacen toda la diferencia. Los profesores realmente conocen tu progreso.",
+  },
+];
 
 export default function LoginPage() {
   return (
@@ -18,15 +39,17 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
 
     const result = await signIn("credentials", {
       email,
@@ -45,33 +68,21 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface px-4">
-      <Card className="w-full max-w-sm">
-        <h1 className="mb-6 text-xl font-bold text-primary">Bristol — Iniciar sesión</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="email"
-            placeholder="Correo electrónico"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <p className="text-sm text-accent">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
-          </Button>
-        </form>
-        <a href="/forgot-password" className="mt-4 block text-center text-sm text-primary">
-          ¿Olvidaste tu contraseña?
-        </a>
-      </Card>
+    <main className="relative bg-bg text-text">
+      <Link
+        href="/"
+        className="absolute left-5 top-5 z-20 inline-flex items-center gap-1.5 rounded-full border border-border bg-white/70 px-3 py-1.5 text-xs font-medium text-muted backdrop-blur-sm transition-colors hover:text-primary"
+      >
+        <ArrowLeft size={14} /> Volver al inicio
+      </Link>
+      <SignInPage
+        title={<span className="text-text">Bienvenido de vuelta</span>}
+        description="Entra a tu cuenta de Bristol para seguir tu progreso."
+        testimonials={TESTIMONIALS}
+        errorMessage={error}
+        loading={loading}
+        onSignIn={handleSubmit}
+      />
     </main>
   );
 }

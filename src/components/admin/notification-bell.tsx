@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Bell } from "lucide-react";
 
 interface NotificationRow {
   id: string;
@@ -42,12 +43,12 @@ export function NotificationBell() {
     <div className="relative">
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="relative rounded-full px-2 py-1 text-sm"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface hover:text-primary active:scale-95"
         aria-label="Notificaciones"
       >
-        🔔
+        <Bell size={18} />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 rounded-full bg-accent px-1.5 text-[10px] text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
             {unreadCount}
           </span>
         )}

@@ -13,6 +13,14 @@
 # testing
 /coverage
 
+# demo data manifest (prisma/demo-info-seed.ts / demo-info-destroy.ts) —
+# local runtime state, not something to commit
+/demo-info-manifest.json
+
+# local-disk student document storage (src/lib/student-document-storage.ts)
+# — dev-only, not durable, never something to commit
+/.data
+
 # next.js
 /.next/
 /out/
@@ -42,3 +50,6 @@ yarn-error.log*
 next-env.d.ts
 ._*
 DIAGRAMA DE PUESTOS Y FORMATOS.docx
+
+# local Claude Code tooling (not app code)
+/.claude/skills/

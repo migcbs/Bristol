@@ -8,13 +8,11 @@ import { Button } from "@/components/ui/button";
 const SECTION_LINKS = [
   { href: "#programas", label: "Programas" },
   { href: "#planteles", label: "Planteles" },
-  { href: "#precios", label: "Precios" },
 ];
 
 const PAGE_LINKS = [
   { href: "/programas", label: "Programas" },
   { href: "/planteles", label: "Planteles" },
-  { href: "/precios", label: "Precios" },
 ];
 
 export function Nav() {
@@ -22,6 +20,22 @@ export function Nav() {
   const isHome = pathname === "/";
   const links = isHome ? SECTION_LINKS : PAGE_LINKS;
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // On the home page, the nav floats transparent over the dark hero shader
+  // until the user scrolls past it — then it becomes the same opaque white
+  // bar every other page always uses.
+  const transparent = isHome && !scrolled && !open;
+
+  useEffect(() => {
+    if (!isHome) return;
+    function handleScroll() {
+      setScrolled(window.scrollY > 64);
+    }
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isHome]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,18 +53,35 @@ export function Nav() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-white/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2 font-display text-xl font-bold text-primary">
+    <header
+      className={`sticky top-0 z-50 transition-colors duration-300 ${
+        transparent
+          ? "border-b border-transparent bg-transparent"
+          : open
+            ? "border-b border-border bg-white"
+            : "border-b border-border bg-white/85 backdrop-blur-md"
+      }`}
+    >
+      <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-6">
+        <Link
+          href="/"
+          className={`flex items-center gap-2 font-display text-xl font-bold transition-colors ${
+            transparent ? "text-white" : "text-primary"
+          }`}
+        >
           Bristol
-          <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+          <span className={`h-1.5 w-1.5 rounded-full transition-colors ${transparent ? "bg-white" : "bg-accent"}`} aria-hidden />
         </Link>
-        <nav className="hidden gap-8 text-sm font-medium text-muted md:flex">
+        <nav
+          className={`hidden gap-8 text-sm font-medium md:flex ${transparent ? "text-white/80" : "text-muted"}`}
+        >
           {links.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="relative py-1 transition-colors hover:text-primary after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full"
+              className={`relative py-1 transition-colors after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:transition-all after:duration-200 hover:after:w-full ${
+                transparent ? "hover:text-white after:bg-white" : "hover:text-primary after:bg-accent"
+              }`}
             >
               {link.label}
             </a>
@@ -58,7 +89,13 @@ export function Nav() {
         </nav>
         <div className="hidden md:block">
           <Link href="/login">
-            <Button variant="outline">Iniciar sesión</Button>
+            {transparent ? (
+              <span className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold tracking-tight text-primary transition-all duration-200 ease-out hover:bg-white/90 active:scale-[0.97]">
+                Iniciar sesión
+              </span>
+            ) : (
+              <Button variant="outline">Iniciar sesión</Button>
+            )}
           </Link>
         </div>
         <button
@@ -67,7 +104,9 @@ export function Nav() {
           aria-expanded={open}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-controls="mobile-menu"
-          className="relative flex h-10 w-10 items-center justify-center rounded-full text-primary md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className={`relative flex h-10 w-10 items-center justify-center rounded-full md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+            transparent ? "text-white focus-visible:ring-white" : "text-primary focus-visible:ring-primary"
+          }`}
         >
           <span
             className={`absolute h-0.5 w-6 rounded-full bg-current transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${

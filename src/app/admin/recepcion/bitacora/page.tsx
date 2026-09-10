@@ -1,12 +1,9 @@
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { assertCampusInScope, getCampusScope } from "@/lib/campus-scope";
+import { getCampusScope } from "@/lib/campus-scope";
 import { prisma } from "@/lib/prisma";
+import { BitacoraCalendarView, type BitacoraEntry } from "@/components/admin/bitacora-calendar-view";
 import type { ReceptionLogType, Role } from "@prisma/client";
-
-const VALID_TYPES: ReceptionLogType[] = ["LLAMADA", "INCIDENCIA", "NOTA"];
-const MAX_NOTE_LENGTH = 2000;
 
 const TYPE_LABELS: Record<ReceptionLogType, string> = {
   LLAMADA: "Llamada",
@@ -14,10 +11,13 @@ const TYPE_LABELS: Record<ReceptionLogType, string> = {
   NOTA: "Nota",
 };
 
+// Bitácora de recepción. The user asked (2026-09-09) for a calendar here
+// too — the month grid browses history, a day opens its notes, and
+// entries are still recorded at "now" through /api/admin/reception-log.
 export default async function BitacoraPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; altas?: string; bajas?: string }>;
+  searchParams: Promise<{ altas?: string; bajas?: string }>;
 }) {
   const session = await auth();
   if (!session?.user) {
@@ -30,16 +30,16 @@ export default async function BitacoraPage({
   const campusWhere =
     scope.type === "ALL" ? {} : scope.type === "CAMPUS_LIST" ? { campusId: { in: scope.campusIds } } : { id: { in: [] } };
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(todayStart);
-  todayEnd.setDate(todayEnd.getDate() + 1);
+  // Enough history for the calendar to be useful without loading everything.
+  const rangeStart = new Date();
+  rangeStart.setMonth(rangeStart.getMonth() - 3);
+  rangeStart.setHours(0, 0, 0, 0);
 
   const [entries, campuses] = await Promise.all([
     prisma.receptionLogEntry.findMany({
-      where: { ...campusWhere, createdAt: { gte: todayStart, lt: todayEnd } },
+      where: { ...campusWhere, createdAt: { gte: rangeStart } },
       orderBy: { createdAt: "desc" },
-      include: { createdBy: { select: { id: true, name: true } } },
+      include: { createdBy: { select: { id: true, name: true } }, campus: { select: { name: true } } },
     }),
     scope.type === "ALL"
       ? prisma.campus.findMany({ orderBy: { name: "asc" } })
@@ -49,41 +49,14 @@ export default async function BitacoraPage({
         }),
   ]);
 
-  async function addEntry(formData: FormData) {
-    "use server";
-
-    const session = await auth();
-    if (!session?.user) redirect("/login");
-    const role = (session.user as { role: Role }).role;
-    if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
-
-    const campusId = formData.get("campusId")?.toString();
-    const type = formData.get("type")?.toString();
-    const note = formData.get("note")?.toString().trim();
-
-    if (!campusId || !type || !VALID_TYPES.includes(type as ReceptionLogType) || !note || note.length > MAX_NOTE_LENGTH) {
-      redirect("/admin/recepcion/bitacora?error=Datos+inv%C3%A1lidos");
-    }
-
-    if (role === "STAFF") {
-      const inScope = await assertCampusInScope(session.user as { id: string; role: Role }, campusId);
-      if (!inScope) {
-        redirect("/admin/recepcion/bitacora?error=No+autorizado");
-      }
-    }
-
-    await prisma.receptionLogEntry.create({
-      data: {
-        campusId,
-        type: type as ReceptionLogType,
-        note,
-        createdById: (session.user as { id: string }).id,
-      },
-    });
-
-    revalidatePath("/admin/recepcion/bitacora");
-    redirect("/admin/recepcion/bitacora");
-  }
+  const calendarEntries: BitacoraEntry[] = entries.map((e) => ({
+    id: e.id,
+    type: e.type,
+    note: e.note,
+    createdAt: e.createdAt.toISOString(),
+    campusName: e.campus.name,
+    authorName: e.createdBy.name,
+  }));
 
   async function generateMonthlyReport() {
     "use server";
@@ -114,17 +87,15 @@ export default async function BitacoraPage({
   }
 
   const params = await searchParams;
+  const todayStr = new Date().toDateString();
+  const todayEntries = entries.filter((e) => e.createdAt.toDateString() === todayStr);
 
   return (
     <div>
       <h1 className="text-lg font-semibold">Bitácora</h1>
-      <p className="mt-1 text-sm text-muted">Registro de recepción del día de hoy.</p>
-
-      {params.error && (
-        <p className="mt-4 rounded-md border border-accent bg-accent/10 px-3 py-2 text-sm text-accent-dark">
-          {params.error}
-        </p>
-      )}
+      <p className="mt-1 text-sm text-muted">
+        Registro de recepción. Haz clic en un día para ver o agregar notas.
+      </p>
 
       {(params.altas !== undefined || params.bajas !== undefined) && (
         <div className="mt-4 rounded-md border border-primary bg-primary/10 px-4 py-3 text-sm">
@@ -136,44 +107,7 @@ export default async function BitacoraPage({
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-start gap-6">
-        <form action={addEntry} className="flex flex-1 min-w-[280px] flex-col gap-3 rounded-lg border border-border bg-surface p-4">
-          <div className="flex flex-wrap gap-3">
-            <select
-              name="campusId"
-              required
-              aria-label="Plantel"
-              className="rounded-md border border-border px-2 py-1.5 text-sm"
-            >
-              {campuses.map((campus) => (
-                <option key={campus.id} value={campus.id}>
-                  {campus.name}
-                </option>
-              ))}
-            </select>
-            <select name="type" required aria-label="Tipo" className="rounded-md border border-border px-2 py-1.5 text-sm">
-              {VALID_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {TYPE_LABELS[type]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <textarea
-            name="note"
-            required
-            placeholder="Nota..."
-            maxLength={MAX_NOTE_LENGTH}
-            className="min-h-[80px] rounded-md border border-border px-2 py-1.5 text-sm"
-          />
-          <button
-            type="submit"
-            className="self-start rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground"
-          >
-            Agregar
-          </button>
-        </form>
-
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <form action={generateMonthlyReport}>
           <button
             type="submit"
@@ -184,8 +118,13 @@ export default async function BitacoraPage({
         </form>
       </div>
 
-      <div className="mt-8 space-y-2">
-        {entries.map((entry) => (
+      <div className="mt-6">
+        <BitacoraCalendarView entries={calendarEntries} campuses={campuses.map((c) => ({ id: c.id, name: c.name }))} />
+      </div>
+
+      <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-muted">Hoy</h2>
+      <div className="mt-3 space-y-2">
+        {todayEntries.map((entry) => (
           <div key={entry.id} className="rounded-md border border-border bg-white p-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="font-medium">{TYPE_LABELS[entry.type]}</span>
@@ -195,9 +134,7 @@ export default async function BitacoraPage({
             <p className="mt-1 text-xs text-muted">Por {entry.createdBy.name}</p>
           </div>
         ))}
-        {entries.length === 0 && (
-          <p className="text-sm text-muted">No hay registros de bitácora hoy.</p>
-        )}
+        {todayEntries.length === 0 && <p className="text-sm text-muted">No hay registros de bitácora hoy.</p>}
       </div>
     </div>
   );

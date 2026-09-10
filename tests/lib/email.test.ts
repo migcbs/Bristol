@@ -51,3 +51,33 @@ describe("sendAnnouncementEmail", () => {
     expect(call.html).toContain("Línea uno<br>Línea dos");
   });
 });
+
+// The Resend SDK (v6) resolves with `{ data: null, error }` on an API-level
+// failure instead of throwing — caught live via enviar-recibo marking
+// reciboFiscalEnviado true on a 401 "API key is invalid". Every send*
+// helper must turn that into a thrown error so callers' try/catch works.
+describe("send* helpers reject when Resend reports an API error", () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    sendMock.mockResolvedValue({ data: null, error: { message: "API key is invalid" } });
+  });
+
+  it("sendAnnouncementEmail throws instead of resolving silently", async () => {
+    const { sendAnnouncementEmail } = await import("@/lib/email");
+    await expect(sendAnnouncementEmail("parent@example.com", { title: "Aviso", body: "..." })).rejects.toThrow(
+      "API key is invalid"
+    );
+  });
+
+  it("sendReciboFiscalEmail throws instead of resolving silently", async () => {
+    const { sendReciboFiscalEmail } = await import("@/lib/email");
+    await expect(
+      sendReciboFiscalEmail("alumno@example.com", {
+        concepto: "Colegiatura",
+        montoFormatted: "$1,500.00",
+        fechaPago: "01/09/2026",
+        fiscal: null,
+      })
+    ).rejects.toThrow("API key is invalid");
+  });
+});

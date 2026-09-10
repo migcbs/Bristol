@@ -18,8 +18,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
+  // Strictly "full" — only Caja creates charges now (Recepción's cobranzas
+  // level was downgraded to "read" 2026-09-09; they consult status only).
   const access = await hasModuleAccess(session.user as { id: string; role: any }, "cobranzas");
-  if (access !== "full" && access !== "initiate") {
+  if (access !== "full") {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
@@ -28,6 +30,7 @@ export async function POST(request: Request) {
     description?: string;
     amountCents?: number;
     dueDate?: string;
+    conceptoPagoId?: string;
   };
   try {
     body = await request.json();
@@ -45,6 +48,13 @@ export async function POST(request: Request) {
     !body.dueDate
   ) {
     return Response.json({ error: "Datos de cargo inválidos" }, { status: 400 });
+  }
+
+  if (body.conceptoPagoId) {
+    const concepto = await prisma.conceptoPago.findUnique({ where: { id: body.conceptoPagoId } });
+    if (!concepto || !concepto.activo) {
+      return Response.json({ error: "Concepto de pago inválido" }, { status: 400 });
+    }
   }
 
   const due = new Date(body.dueDate);
@@ -69,6 +79,7 @@ export async function POST(request: Request) {
       description: body.description,
       amountCents: body.amountCents,
       dueDate: due,
+      conceptoPagoId: body.conceptoPagoId ?? null,
     },
   });
 

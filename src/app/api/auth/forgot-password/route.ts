@@ -14,7 +14,14 @@ export async function POST(request: Request) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (user) {
     const token = await createToken(user.id, "PASSWORD_RESET", 60);
-    await sendPasswordResetEmail(user.email, token);
+    try {
+      await sendPasswordResetEmail(user.email, token);
+    } catch (err) {
+      // Never reveal a send failure to the caller — same reasoning as
+      // returning `{ ok: true }` unconditionally below: this endpoint
+      // must not leak whether an email exists or whether delivery worked.
+      console.error("sendPasswordResetEmail failed", err);
+    }
   }
 
   return Response.json({ ok: true });

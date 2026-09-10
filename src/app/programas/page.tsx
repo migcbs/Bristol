@@ -21,6 +21,9 @@ export default async function ProgramasPage() {
       <Nav />
       <div className="bg-primary px-6 py-20 text-primary-foreground">
         <div className="mx-auto max-w-3xl">
+          <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold tracking-wide text-white/70">
+            Bristol · Inglés Profesional
+          </span>
           <h1 className="font-display text-4xl font-bold md:text-5xl">
             Programas por nivel
           </h1>

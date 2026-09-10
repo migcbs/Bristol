@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Table, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { RecordCard } from "@/components/ui/record-card";
+import { Tag } from "@/components/ui/tag";
+import { Calendar } from "lucide-react";
 import type { Role, TicketStatus } from "@prisma/client";
 
 const VALID_STATUSES: TicketStatus[] = ["ABIERTO", "EN_PROCESO", "RESUELTO"];
@@ -16,10 +17,10 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   RESUELTO: "Resuelto",
 };
 
-const STATUS_TONE: Record<TicketStatus, "primary" | "accent" | "neutral"> = {
-  ABIERTO: "accent",
-  EN_PROCESO: "primary",
-  RESUELTO: "neutral",
+const STATUS_TAG_TONE: Record<TicketStatus, "red" | "amber" | "green"> = {
+  ABIERTO: "red",
+  EN_PROCESO: "amber",
+  RESUELTO: "green",
 };
 
 export default async function TicketsPage({
@@ -175,76 +176,65 @@ export default async function TicketsPage({
         </button>
       </form>
 
-      <div className="mt-8 overflow-x-auto rounded-lg border border-border bg-white">
-        <Table>
-          <thead>
-            <TableRow>
-              <TableHead>Título</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Asignado a</TableHead>
-              <TableHead>Estatus</TableHead>
-              <TableHead>Creado</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </thead>
-          <tbody>
-            {tickets.map((ticket) => (
-              <TableRow key={ticket.id}>
-                <TableCell>{ticket.title}</TableCell>
-                <TableCell className="max-w-xs whitespace-pre-wrap">{ticket.description}</TableCell>
-                <TableCell>{ticket.assignedTo?.name ?? "Sin asignar"}</TableCell>
-                <TableCell>
-                  <Badge tone={STATUS_TONE[ticket.status]}>{STATUS_LABELS[ticket.status]}</Badge>
-                </TableCell>
-                <TableCell>{ticket.createdAt.toLocaleDateString("es-MX")}</TableCell>
-                <TableCell>
-                  <form action={updateTicket} className="flex flex-wrap items-center gap-2">
-                    <input type="hidden" name="id" value={ticket.id} />
-                    <select
-                      name="status"
-                      defaultValue={ticket.status}
-                      aria-label="Estatus"
-                      className="rounded-md border border-border px-2 py-1 text-xs"
-                    >
-                      {VALID_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      name="assignedToId"
-                      defaultValue={ticket.assignedToId ?? ""}
-                      aria-label="Asignado a"
-                      className="rounded-md border border-border px-2 py-1 text-xs"
-                    >
-                      <option value="">Sin asignar</option>
-                      {assignees.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="submit"
-                      className="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-surface"
-                    >
-                      Actualizar
-                    </button>
-                  </form>
-                </TableCell>
-              </TableRow>
-            ))}
-            {tickets.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted">
-                  No hay tickets todavía.
-                </TableCell>
-              </TableRow>
-            )}
-          </tbody>
-        </Table>
+      <div className="mt-8 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+        {tickets.map((ticket) => (
+          <RecordCard
+            key={ticket.id}
+            avatarId={ticket.id}
+            avatarLabel={ticket.title.trim().charAt(0).toUpperCase() || "?"}
+            name={ticket.title}
+            meta={
+              <>
+                <span className="truncate">{ticket.description}</span>
+                <span className="flex items-center gap-1">
+                  <Calendar size={11} /> {ticket.createdAt.toLocaleDateString("es-MX")}
+                </span>
+                <span>{ticket.assignedTo?.name ?? "Sin asignar"}</span>
+              </>
+            }
+            tags={
+              <>
+                <Tag tone={STATUS_TAG_TONE[ticket.status]}>{STATUS_LABELS[ticket.status]}</Tag>
+                <form action={updateTicket} className="mt-1 flex w-full flex-wrap items-center gap-1.5">
+                  <input type="hidden" name="id" value={ticket.id} />
+                  <select
+                    name="status"
+                    defaultValue={ticket.status}
+                    aria-label="Estatus"
+                    className="rounded-md border border-border px-2 py-1 text-xs"
+                  >
+                    {VALID_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    name="assignedToId"
+                    defaultValue={ticket.assignedToId ?? ""}
+                    aria-label="Asignado a"
+                    className="rounded-md border border-border px-2 py-1 text-xs"
+                  >
+                    <option value="">Sin asignar</option>
+                    {assignees.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    className="rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-surface"
+                  >
+                    Actualizar
+                  </button>
+                </form>
+              </>
+            }
+          />
+        ))}
       </div>
+      {tickets.length === 0 && <p className="mt-6 text-center text-sm text-muted">No hay tickets todavía.</p>}
     </div>
   );
 }
