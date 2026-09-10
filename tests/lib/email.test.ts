@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// email.ts builds the Resend client lazily and refuses to send without a
+// key; these tests exercise the send helpers with `resend` mocked, so a
+// dummy key just has to be present.
+process.env.RESEND_API_KEY = "re_test";
+
 const sendMock = vi.fn();
 vi.mock("resend", () => {
   return {

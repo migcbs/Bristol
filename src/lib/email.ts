@@ -1,7 +1,21 @@
-import { Resend } from "resend";
+import { Resend, type CreateEmailOptions } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM ?? "Bristol <no-reply@bristol-ingles.com>";
+
+// Instantiate Resend lazily. `new Resend(undefined)` throws immediately,
+// and doing it at module scope crashed `next build` ("collecting page
+// data" evaluates every route module) on any deploy without
+// RESEND_API_KEY set. Now the client is only built on the first send, and
+// a missing key surfaces as a thrown error the caller's try/catch can
+// degrade — email is optional, the rest of the app isn't.
+let resendClient: Resend | null = null;
+function getResend(): Resend {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY no está configurada; no se puede enviar el correo.");
+  }
+  resendClient ??= new Resend(process.env.RESEND_API_KEY);
+  return resendClient;
+}
 
 function appUrl(path: string): string {
   const base = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -15,8 +29,8 @@ function appUrl(path: string): string {
 // caller's try/catch actually sees, instead of silently looking like success
 // (caught live: enviar-recibo was marking `reciboFiscalEnviado: true` on a
 // 401 "API key is invalid").
-async function sendOrThrow(params: Parameters<typeof resend.emails.send>[0]): Promise<void> {
-  const { error } = await resend.emails.send(params);
+async function sendOrThrow(params: CreateEmailOptions): Promise<void> {
+  const { error } = await getResend().emails.send(params);
   if (error) {
     throw new Error(`Resend error: ${error.message}`);
   }
