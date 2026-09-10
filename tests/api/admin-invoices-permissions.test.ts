@@ -30,9 +30,22 @@ describe("POST /api/admin/invoices — module access", () => {
     expect(res.status).toBe(403);
   });
 
-  it("allows a puesto with initiate access to create an invoice", async () => {
+  // Charge creation is Caja-only (strictly "full") since 2026-09-09 —
+  // Recepción's cobranzas level was downgraded from "initiate" to "read"
+  // (they consult payment status, they don't create or collect charges).
+  it("rejects a puesto with only initiate/read access — creation requires full", async () => {
     (auth as any).mockResolvedValue({ user: { id: "s1", role: "STAFF" } });
     (hasModuleAccess as any).mockResolvedValue("initiate");
+    const { prisma } = await import("@/lib/prisma");
+
+    const res = await POST(jsonRequest({ studentId: "st1", description: "x", amountCents: 1000, dueDate: "2026-09-01" }));
+    expect(res.status).toBe(403);
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it("allows full access to create an invoice", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "s1", role: "STAFF" } });
+    (hasModuleAccess as any).mockResolvedValue("full");
     const { prisma } = await import("@/lib/prisma");
     (prisma.student.findUnique as any).mockResolvedValue({ id: "st1", campusId: "c1" });
     const { getCampusScope } = await import("@/lib/campus-scope");

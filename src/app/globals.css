@@ -21,7 +21,9 @@
   --color-accent: var(--color-accent);
   --color-accent-dark: var(--color-accent-dark);
   --color-accent-foreground: var(--color-accent-foreground);
+  --color-bg: var(--color-bg);
   --color-surface: var(--color-surface);
+  --color-text: var(--color-text);
   --color-muted: var(--color-muted);
   --color-border: var(--color-border);
 
@@ -44,10 +46,100 @@ body {
   color: var(--color-text);
 }
 
-h1,
-h2,
-h3,
-h4 {
-  font-family: var(--font-display);
-  letter-spacing: -0.02em;
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Used by the mobile bottom nav (admin + portal) — a horizontally
+ * scrollable strip should still hide its scrollbar, matching the native
+ * app feel of a tab bar rather than looking like a scrolled container. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Sign-in page: staggered entrance for form fields and the hero-side testimonials. */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+@keyframes slideRightIn {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateX(0px);
+  }
+}
+
+@keyframes testimonialIn {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px) scale(1);
+  }
+}
+
+.animate-element {
+  opacity: 0;
+  animation: fadeSlideIn 0.6s ease-out forwards;
+}
+
+.animate-slide-right {
+  opacity: 0;
+  animation: slideRightIn 0.7s ease-out forwards;
+}
+
+.animate-testimonial {
+  opacity: 0;
+  animation: testimonialIn 0.6s ease-out forwards;
+}
+
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-300 { animation-delay: 0.3s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-500 { animation-delay: 0.5s; }
+.animate-delay-600 { animation-delay: 0.6s; }
+.animate-delay-700 { animation-delay: 0.7s; }
+.animate-delay-800 { animation-delay: 0.8s; }
+.animate-delay-900 { animation-delay: 0.9s; }
+.animate-delay-1000 { animation-delay: 1s; }
+.animate-delay-1200 { animation-delay: 1.2s; }
+.animate-delay-1400 { animation-delay: 1.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-element,
+  .animate-slide-right,
+  .animate-testimonial {
+    animation: none;
+    opacity: 1;
+  }
 }

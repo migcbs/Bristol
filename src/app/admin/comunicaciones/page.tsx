@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { AnnouncementForm } from "@/components/admin/announcement-form";
+import { WhatsAppAnnouncementButton } from "@/components/admin/whatsapp-announcement-button";
 import type { Role } from "@prisma/client";
 
 export default async function ComunicacionesPage() {
@@ -39,7 +40,10 @@ export default async function ComunicacionesPage() {
       <div className="mt-8 space-y-3">
         {announcements.map((a) => (
           <Card key={a.id}>
-            <p className="text-sm font-medium">{a.title}</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-medium">{a.title}</p>
+              <WhatsAppAnnouncementButton announcementId={a.id} />
+            </div>
             <p className="mt-1 text-sm text-muted">{a.body}</p>
             <p className="mt-2 text-xs text-muted">
               {a.audience === "ALL" && "Toda la escuela"}

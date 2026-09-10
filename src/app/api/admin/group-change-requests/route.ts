@@ -1,18 +1,34 @@
 import { auth } from "@/lib/auth";
 import { assertCampusInScope, getCampusScope } from "@/lib/campus-scope";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import type { GroupChangeRequestType, Role } from "@prisma/client";
 
 const MAX_REASON_LENGTH = 500;
 
+// Who can REQUEST a group change (BAJA or CAMBIO_GRUPO) — confirmed with
+// the user 2026-09-09: a TEACHER or Recepción can ask for one, Control
+// Escolar/Calidad y Control/Dirección de Campus approve it (see
+// reviewGroupChangeRequest in ./[id]/route.ts, unchanged). Previously
+// nothing in the UI ever called this endpoint at all, and it had no
+// module check for STAFF beyond the bare role — any puesto (even Caja or
+// Comercial, who have no business here) could create one. Both gaps
+// fixed here alongside actually wiring up the create flow.
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) {
     return Response.json({ error: "No autenticado" }, { status: 401 });
   }
-  const role = (session.user as { role: Role }).role;
-  if (role !== "ADMIN" && role !== "STAFF") {
+  const actor = session.user as { id: string; role: Role };
+  const role = actor.role;
+  if (role !== "ADMIN" && role !== "STAFF" && role !== "TEACHER") {
     return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+  if (role === "STAFF") {
+    const access = await hasModuleAccess(actor, "solicitudes");
+    if (access === "none") {
+      return Response.json({ error: "No autorizado" }, { status: 403 });
+    }
   }
 
   let body: {
@@ -46,7 +62,7 @@ export async function POST(request: Request) {
 
   const enrollment = await prisma.enrollment.findFirst({
     where: { studentId: body.studentId, groupId: body.currentGroupId, completedAt: null },
-    include: { student: true },
+    include: { student: true, group: true },
   });
   if (!enrollment) {
     return Response.json(
@@ -56,13 +72,16 @@ export async function POST(request: Request) {
   }
 
   if (role === "STAFF") {
-    const inScope = await assertCampusInScope(
-      session.user as { id: string; role: Role },
-      enrollment.student.campusId
-    );
+    const inScope = await assertCampusInScope(actor, enrollment.student.campusId);
     if (!inScope) {
       return Response.json({ error: "No autorizado" }, { status: 403 });
     }
+  }
+  // A teacher can only request a change for a student in a group THEY
+  // teach — not just "same campus" (that would let a teacher meddle with
+  // another teacher's group).
+  if (role === "TEACHER" && enrollment.group.teacherId !== actor.id) {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
   if (body.type === "CAMBIO_GRUPO") {
@@ -89,7 +108,7 @@ export async function POST(request: Request) {
         currentGroupId: body.currentGroupId,
         requestedGroupId: body.type === "CAMBIO_GRUPO" ? body.requestedGroupId! : null,
         reason,
-        requestedById: (session.user as { id: string }).id,
+        requestedById: actor.id,
       },
     });
 

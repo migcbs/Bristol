@@ -7,6 +7,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     invoice: { create: vi.fn(), findMany: vi.fn() },
     student: { findUnique: vi.fn() },
+    conceptoPago: { findUnique: vi.fn() },
   },
 }));
 
@@ -133,6 +134,53 @@ describe("POST /api/admin/invoices", () => {
         description: "Colegiatura Marzo",
         amountCents: 150000,
         dueDate: new Date("2026-09-01"),
+        conceptoPagoId: null,
+      },
+    });
+  });
+
+  it("rejects an inactive conceptoPagoId", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u2", role: "STAFF" } });
+    (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
+    (prisma.conceptoPago.findUnique as any).mockResolvedValue({ id: "cp1", activo: false });
+
+    const res = await POST(
+      jsonRequest("POST", {
+        studentId: "s1",
+        description: "Colegiatura Marzo",
+        amountCents: 150000,
+        dueDate: "2026-09-01",
+        conceptoPagoId: "cp1",
+      })
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it("creates an invoice with a valid conceptoPagoId", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "u2", role: "STAFF" } });
+    (getCampusScope as any).mockResolvedValue({ type: "CAMPUS_LIST", campusIds: ["c1"] });
+    (prisma.conceptoPago.findUnique as any).mockResolvedValue({ id: "cp1", activo: true });
+    (prisma.student.findUnique as any).mockResolvedValue({ id: "s1", campusId: "c1" });
+    (prisma.invoice.create as any).mockResolvedValue({ id: "i1" });
+
+    const res = await POST(
+      jsonRequest("POST", {
+        studentId: "s1",
+        description: "Colegiatura Marzo",
+        amountCents: 150000,
+        dueDate: "2026-09-01",
+        conceptoPagoId: "cp1",
+      })
+    );
+    expect(res.status).toBe(201);
+    expect(prisma.invoice.create).toHaveBeenCalledWith({
+      data: {
+        studentId: "s1",
+        description: "Colegiatura Marzo",
+        amountCents: 150000,
+        dueDate: new Date("2026-09-01"),
+        conceptoPagoId: "cp1",
       },
     });
   });

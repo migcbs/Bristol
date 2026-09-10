@@ -17,8 +17,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
+  // Strictly "full" — charge creation is Caja-only now (see
+  // ../route.ts POST). This endpoint currently has no UI caller; kept
+  // consistent with the general creation gate rather than left as a
+  // backdoor for a lower access level.
   const access = await hasModuleAccess(session.user as { id: string; role: Role }, "cobranzas");
-  if (access !== "full" && access !== "initiate") {
+  if (access !== "full") {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 

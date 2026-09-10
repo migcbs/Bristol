@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
+import { FaqChatWidget } from "@/components/landing/faq-chat-widget";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -16,7 +17,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Bristol — Inglés Profesional",
   description:
-    "Aprende inglés con confianza en Bristol: programas presenciales por nivel, profesores dedicados y planteles cerca de ti.",
+    "Aprende inglés con confianza en Bristol: programas presenciales y virtuales por nivel, profesores dedicados y planteles cerca de ti.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -25,7 +26,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="es"
       className={`${spaceGrotesk.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-body">{children}</body>
+      <body className="min-h-full flex flex-col font-body">
+        {children}
+        <FaqChatWidget />
+      </body>
     </html>
   );
 }

@@ -2,10 +2,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { getCampusScope } from "@/lib/campus-scope";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import { reviewGroupChangeRequest } from "@/app/api/admin/group-change-requests/[id]/route";
-import { Table, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { RecordCard } from "@/components/ui/record-card";
+import { Tag } from "@/components/ui/tag";
+import { IconActionButton } from "@/components/ui/icon-action-button";
+import { NewSolicitudModal } from "@/components/admin/new-solicitud-modal";
+import { Check, X, ArrowRight } from "lucide-react";
 import type { GroupChangeRequestType, Role } from "@prisma/client";
 
 const TYPE_LABELS: Record<GroupChangeRequestType, string> = {
@@ -25,7 +29,26 @@ export default async function SolicitudesPage({
   const role = (session.user as { role: Role }).role;
   if (role !== "ADMIN" && role !== "STAFF") redirect("/portal");
 
+  // This page previously had no module check at all beyond the bare
+  // ADMIN/STAFF role — any puesto (even Caja or Comercial) could view the
+  // pending-solicitudes queue, though the approve/reject action itself was
+  // already protected inside reviewGroupChangeRequest. Fixed 2026-09-09
+  // alongside wiring up the actual "who creates a solicitud" flow.
+  const access = await hasModuleAccess(session.user as { id: string; role: Role }, "solicitudes");
+  if (access === "none") redirect("/admin");
+
   const scope = await getCampusScope(session.user as { id: string; role: Role });
+  const destinationGroups =
+    scope.type === "ALL"
+      ? await prisma.group.findMany({ select: { id: true, name: true, campusId: true }, orderBy: { name: "asc" } })
+      : scope.type === "CAMPUS_LIST"
+        ? await prisma.group.findMany({
+            where: { campusId: { in: scope.campusIds } },
+            select: { id: true, name: true, campusId: true },
+            orderBy: { name: "asc" },
+          })
+        : [];
+
   const where =
     scope.type === "ALL"
       ? { status: "PENDIENTE" as const }
@@ -80,8 +103,13 @@ export default async function SolicitudesPage({
 
   return (
     <div>
-      <h1 className="text-lg font-semibold">Solicitudes de cambio de grupo</h1>
-      <p className="mt-1 text-sm text-muted">Solicitudes pendientes de revisión.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold">Solicitudes de cambio de grupo</h1>
+          <p className="mt-1 text-sm text-muted">Solicitudes pendientes de revisión.</p>
+        </div>
+        <NewSolicitudModal destinationGroups={destinationGroups} />
+      </div>
 
       {params.error && (
         <p className="mt-4 rounded-md border border-accent bg-accent/10 px-3 py-2 text-sm text-accent-dark">
@@ -89,68 +117,55 @@ export default async function SolicitudesPage({
         </p>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-border bg-white">
-        <Table>
-          <thead>
-            <TableRow>
-              <TableHead>Alumno</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Grupo actual</TableHead>
-              <TableHead>Grupo solicitado</TableHead>
-              <TableHead>Motivo</TableHead>
-              <TableHead>Solicitó</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </thead>
-          <tbody>
-            {requests.map((request) => (
-              <TableRow key={request.id}>
-                <TableCell>{request.student.user.name}</TableCell>
-                <TableCell>
-                  <Badge tone={request.type === "BAJA" ? "accent" : "primary"}>
-                    {TYPE_LABELS[request.type]}
-                  </Badge>
-                </TableCell>
-                <TableCell>{request.currentGroup.name}</TableCell>
-                <TableCell>{request.requestedGroup?.name ?? "—"}</TableCell>
-                <TableCell>{request.reason}</TableCell>
-                <TableCell>{request.requestedBy.name}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <form action={review}>
-                      <input type="hidden" name="id" value={request.id} />
-                      <input type="hidden" name="decision" value="APROBADA" />
-                      <button
-                        type="submit"
-                        className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground"
-                      >
-                        Aprobar
-                      </button>
-                    </form>
-                    <form action={review}>
-                      <input type="hidden" name="id" value={request.id} />
-                      <input type="hidden" name="decision" value="RECHAZADA" />
-                      <button
-                        type="submit"
-                        className="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-surface"
-                      >
-                        Rechazar
-                      </button>
-                    </form>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {requests.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted">
-                  No hay solicitudes pendientes.
-                </TableCell>
-              </TableRow>
-            )}
-          </tbody>
-        </Table>
+      <div className="mt-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+        {requests.map((request) => (
+          <RecordCard
+            key={request.id}
+            avatarId={request.student.user.id}
+            avatarLabel={request.student.user.name.trim().charAt(0).toUpperCase() || "?"}
+            name={request.student.user.name}
+            meta={
+              <>
+                <span className="flex items-center gap-1">
+                  {request.currentGroup.name}
+                  {request.requestedGroup && (
+                    <>
+                      <ArrowRight size={11} /> {request.requestedGroup.name}
+                    </>
+                  )}
+                </span>
+                <span>Solicitó: {request.requestedBy.name}</span>
+              </>
+            }
+            tags={
+              <>
+                <Tag tone={request.type === "BAJA" ? "red" : "blue"}>{TYPE_LABELS[request.type]}</Tag>
+                <p className="w-full truncate text-xs text-muted">{request.reason}</p>
+              </>
+            }
+            actions={
+              access === "full" ? (
+                <>
+                  <form action={review}>
+                    <input type="hidden" name="id" value={request.id} />
+                    <input type="hidden" name="decision" value="APROBADA" />
+                    <IconActionButton icon={Check} label="Aprobar" type="submit" />
+                  </form>
+                  <form action={review}>
+                    <input type="hidden" name="id" value={request.id} />
+                    <input type="hidden" name="decision" value="RECHAZADA" />
+                    <IconActionButton icon={X} label="Rechazar" tone="danger" type="submit" />
+                  </form>
+                </>
+              ) : undefined
+            }
+          />
+        ))}
       </div>
+
+      {requests.length === 0 && (
+        <p className="mt-6 text-center text-sm text-muted">No hay solicitudes pendientes.</p>
+      )}
     </div>
   );
 }

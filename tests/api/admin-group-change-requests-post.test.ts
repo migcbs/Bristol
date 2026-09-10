@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/campus-scope", () => ({ getCampusScope: vi.fn(), assertCampusInScope: vi.fn() }));
+vi.mock("@/lib/staff-permissions", () => ({ hasModuleAccess: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     student: { findUnique: vi.fn() },
@@ -13,6 +14,7 @@ vi.mock("@/lib/prisma", () => ({
 
 import { auth } from "@/lib/auth";
 import { assertCampusInScope } from "@/lib/campus-scope";
+import { hasModuleAccess } from "@/lib/staff-permissions";
 import { prisma } from "@/lib/prisma";
 import { POST } from "@/app/api/admin/group-change-requests/route";
 
@@ -27,7 +29,14 @@ function jsonRequest(body: unknown) {
 const VALID_BODY = { type: "BAJA", studentId: "st1", currentGroupId: "g1", reason: "Cambio de ciudad" };
 
 describe("POST /api/admin/group-change-requests", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Most tests here exercise the body-validation/enrollment/scope logic,
+    // not the module-access gate itself (see
+    // admin-group-change-requests-permissions.test.ts for that) — default
+    // to "full" so those tests don't all have to restate it.
+    (hasModuleAccess as any).mockResolvedValue("full");
+  });
 
   it("returns 401 without a session", async () => {
     (auth as any).mockResolvedValue(null);
@@ -145,5 +154,49 @@ describe("POST /api/admin/group-change-requests", () => {
     expect(prisma.groupChangeRequest.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ requestedGroupId: "g2" }),
     });
+  });
+
+  // 2026-09-09: TEACHER can now request a change too (previously this
+  // endpoint was ADMIN/STAFF only, and nothing in the UI even called it).
+  describe("TEACHER requester", () => {
+    it("allows a TEACHER to request a change for a student in their own group", async () => {
+      (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+      (prisma.enrollment.findFirst as any).mockResolvedValue({
+        id: "e1",
+        student: { campusId: "c1" },
+        group: { teacherId: "t1" },
+      });
+      (prisma.groupChangeRequest.create as any).mockResolvedValue({ id: "gcr1" });
+
+      const res = await POST(jsonRequest(VALID_BODY));
+      expect(res.status).toBe(201);
+      expect(prisma.groupChangeRequest.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ requestedById: "t1" }),
+      });
+    });
+
+    it("rejects a TEACHER requesting for a student in a group they don't teach", async () => {
+      (auth as any).mockResolvedValue({ user: { id: "t1", role: "TEACHER" } });
+      (prisma.enrollment.findFirst as any).mockResolvedValue({
+        id: "e1",
+        student: { campusId: "c1" },
+        group: { teacherId: "someone-else" },
+      });
+
+      const res = await POST(jsonRequest(VALID_BODY));
+      expect(res.status).toBe(403);
+      expect(prisma.groupChangeRequest.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // A STAFF puesto with no business here (e.g. Caja, Comercial) previously
+  // had no module check at all beyond the bare role — fixed 2026-09-09.
+  it("returns 403 for a STAFF account whose puesto has no solicitudes access", async () => {
+    (auth as any).mockResolvedValue({ user: { id: "s1", role: "STAFF" } });
+    (hasModuleAccess as any).mockResolvedValue("none");
+
+    const res = await POST(jsonRequest(VALID_BODY));
+    expect(res.status).toBe(403);
+    expect(prisma.enrollment.findFirst).not.toHaveBeenCalled();
   });
 });

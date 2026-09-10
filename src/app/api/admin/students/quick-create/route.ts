@@ -17,6 +17,10 @@ function isMatriculaCollision(error: unknown): boolean {
   return !target || JSON.stringify(target).includes("matricula");
 }
 
+function generateTemporaryPassword(): string {
+  return crypto.randomBytes(9).toString("base64url");
+}
+
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) {
@@ -27,7 +31,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  let body: { name?: string; email?: string; campusId?: string };
+  let body: { name?: string; email?: string; campusId?: string; tutorName?: string; tutorEmail?: string; leadId?: string };
   try {
     body = await request.json();
   } catch {
@@ -36,11 +40,29 @@ export async function POST(request: Request) {
 
   const name = body.name?.trim();
   const email = body.email?.trim();
+  const tutorName = body.tutorName?.trim() || undefined;
+  const tutorEmail = body.tutorEmail?.trim() || undefined;
+
   if (!name || !email || !body.campusId || !isValidEmail(email)) {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
   if (name.length > 120 || email.length > 254) {
+    return Response.json({ error: "Uno o más campos exceden la longitud permitida" }, { status: 400 });
+  }
+
+  // A tutor is either fully provided (name + valid email) or not provided
+  // at all — no half-filled tutor records.
+  if ((tutorName && !tutorEmail) || (tutorEmail && !tutorName)) {
+    return Response.json({ error: "Captura el nombre y correo del tutor, o ninguno" }, { status: 400 });
+  }
+  if (tutorEmail && !isValidEmail(tutorEmail)) {
+    return Response.json({ error: "Correo del tutor inválido" }, { status: 400 });
+  }
+  if (tutorEmail && tutorEmail === email) {
+    return Response.json({ error: "El alumno y el tutor no pueden compartir el mismo correo" }, { status: 400 });
+  }
+  if (tutorName && tutorName.length > 120) {
     return Response.json({ error: "Uno o más campos exceden la longitud permitida" }, { status: 400 });
   }
 
@@ -57,23 +79,78 @@ export async function POST(request: Request) {
     return Response.json({ error: "Ya existe una cuenta con este correo electrónico" }, { status: 409 });
   }
 
-  const temporaryPassword = crypto.randomBytes(12).toString("base64url");
+  if (body.leadId) {
+    const lead = await prisma.lead.findUnique({ where: { id: body.leadId } });
+    if (!lead) {
+      return Response.json({ error: "Lead no encontrado" }, { status: 404 });
+    }
+  }
+
+  let existingTutor: { id: string } | null = null;
+  if (tutorEmail) {
+    existingTutor = await prisma.user.findUnique({ where: { email: tutorEmail }, select: { id: true } });
+  }
+
+  const temporaryPassword = generateTemporaryPassword();
   const passwordHash = await hashPassword(temporaryPassword);
+  const tutorTemporaryPassword = tutorEmail && !existingTutor ? generateTemporaryPassword() : undefined;
+  const tutorPasswordHash = tutorTemporaryPassword ? await hashPassword(tutorTemporaryPassword) : undefined;
 
   let student;
+  let tutorUserId: string | undefined = existingTutor?.id;
   let lastError: unknown;
   let attempt = 0;
   while (attempt < MAX_MATRICULA_ATTEMPTS) {
     attempt++;
     try {
       student = await prisma.$transaction(async (tx) => {
+        // Recepción verifies identity in person — the account doesn't need
+        // the usual email-verification-link loop, and staff need the
+        // temporary password to actually be usable on first login.
         const user = await tx.user.create({
-          data: { name, email, role: "STUDENT", passwordHash },
+          data: {
+            name,
+            email,
+            role: "STUDENT",
+            passwordHash,
+            emailVerifiedAt: new Date(),
+            mustChangePassword: true,
+          },
         });
         const matricula = await generateMatricula(tx);
-        return tx.student.create({
+        const createdStudent = await tx.student.create({
           data: { userId: user.id, campusId: body.campusId!, matricula },
         });
+
+        if (tutorEmail && tutorName) {
+          const tutor =
+            existingTutor ??
+            (await tx.user.create({
+              data: {
+                name: tutorName,
+                email: tutorEmail,
+                role: "PARENT",
+                passwordHash: tutorPasswordHash!,
+                emailVerifiedAt: new Date(),
+                mustChangePassword: true,
+              },
+            }));
+          tutorUserId = tutor.id;
+          await tx.parentStudent.create({
+            data: { parentUserId: tutor.id, studentId: createdStudent.id },
+          });
+        }
+
+        // "Inscribir" from Admisiones — confirmed with the user 2026-09-09:
+        // clicking it should actually do something, not just flip a status
+        // dropdown. This is that "something": the lead becomes a real
+        // Student account, and the lead itself is marked ENROLLED in the
+        // same transaction so the two can never disagree.
+        if (body.leadId) {
+          await tx.lead.update({ where: { id: body.leadId! }, data: { status: "ENROLLED" } });
+        }
+
+        return createdStudent;
       });
       lastError = undefined;
       break;
@@ -93,5 +170,19 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json(student, { status: 201 });
+  return Response.json(
+    {
+      ...student,
+      temporaryPassword,
+      tutor: tutorUserId
+        ? {
+            id: tutorUserId,
+            email: tutorEmail,
+            temporaryPassword: tutorTemporaryPassword,
+            alreadyExisted: !!existingTutor,
+          }
+        : null,
+    },
+    { status: 201 }
+  );
 }

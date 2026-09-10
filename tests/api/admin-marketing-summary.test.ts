@@ -32,14 +32,15 @@ describe("GET /api/admin/marketing/summary", () => {
     (leadScopeWhere as any).mockReturnValue({ campusId: { in: ["c1"] } });
     (prisma.lead.groupBy as any)
       .mockResolvedValueOnce([{ status: "NEW", _count: { _all: 3 } }])
-      .mockResolvedValueOnce([{ source: "WEB", _count: { _all: 2 } }]);
+      .mockResolvedValueOnce([{ source: "WEB", _count: { _all: 2 } }])
+      .mockResolvedValueOnce([{ source: "WEB", status: "NEW", _count: { _all: 2 } }]);
 
     const res = await GET();
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({
       byStatus: [{ status: "NEW", count: 3 }],
-      bySource: [{ source: "WEB", count: 2 }],
+      bySource: [{ source: "WEB", count: 2, enrolled: 0, conversionRate: 0 }],
     });
     expect(prisma.lead.groupBy).toHaveBeenCalledWith({
       by: ["status"],
