@@ -53,3 +53,6 @@ DIAGRAMA DE PUESTOS Y FORMATOS.docx
 
 # local Claude Code tooling (not app code)
 /.claude/skills/
+
+# Configuración local de Claude Code
+.claude/
